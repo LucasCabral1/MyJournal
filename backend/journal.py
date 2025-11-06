@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import feedparser
 from email.utils import mktime_tz, parsedate_tz
 
-from core.database import save_articles_to_db
+from core.database import delete_old_articles, save_articles_to_db
 from core import models 
 
 load_dotenv()
@@ -114,27 +114,7 @@ def fetch_news_from_rss(feed_url, limit):
 
 
 
-def delete_old_articles(db_name, days_old):
-    try:
-        conn = sqlite3.connect(db_name)
-        cursor = conn.cursor()
-        
-        cutoff_date = datetime.datetime.now() - datetime.timedelta(days=days_old)
-        cutoff_date_str = cutoff_date.isoformat()
 
-        cursor.execute("""
-        DELETE FROM articles 
-        WHERE published_at < ?
-        """, (cutoff_date_str,))
-        
-        conn.commit()
-        print(f"\nCleaning database: Deleted {cursor.rowcount} articles older than {days_old} days.")
-        
-    except sqlite3.Error as e:
-        print(f"Database error during delete: {e}")
-    finally:
-        if conn:
-            conn.close()
 
 def main():
     print("Starting MyJournal...")
@@ -157,7 +137,7 @@ def main():
     print("\nFetching news from specific sites...")
 
 
-    delete_old_articles(DB_NAME, DAYS_TO_KEEP_ARTICLES)
+    delete_old_articles(DAYS_TO_KEEP_ARTICLES)
     
     print("\nMyJournal run complete.")
 

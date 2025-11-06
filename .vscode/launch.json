@@ -1,0 +1,52 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+      // --- NOVA CONFIGURAÇÃO DO FRONTEND ---
+      "name": "React: Debug no Chrome",
+      "type": "chrome", // ou "msedge" se preferir
+      "request": "launch",
+      
+      // ⚠️ MUDE A PORTA se o seu 'npm run dev' rodar em outra
+      "url": "http://localhost:5173", 
+
+      // ⚠️ MUDE "frontend" se o nome da sua pasta for outro
+      "webRoot": "${workspaceFolder}/frontend/my-journal",
+
+      // ℹ️ Isso diz ao VSCode para rodar a tarefa que criamos
+      // antes de abrir o navegador.
+      "preLaunchTask": "npm run dev (frontend)"
+    },
+       {
+      "name": "Python: FastAPI (MyJournal)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn", // Diz ao Python para rodar "-m uvicorn"
+      "args": [
+        "api:app", // O arquivo (api.py) e o objeto (app)
+        "--reload",
+        "--port",
+        "8001"
+      ],
+      
+      // --- ESTA É A CORREÇÃO ---
+      // Define o diretório de trabalho para a pasta 'backend'
+      "cwd": "${workspaceFolder}/backend", 
+      
+      "jinja": true // (Opcional) Habilita debug para templates Jinja
+    },
+    ],
+    "compounds": [
+    {
+      "name": "Full Stack: Iniciar Backend e Frontend",
+      "configurations": [
+        "Python: FastAPI (MyJournal)",
+        "React: Debug no Chrome"
+      ],
+      "stopAll": true // Para um, para todos
+    }
+  ]
+}

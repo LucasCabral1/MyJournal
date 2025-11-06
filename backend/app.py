@@ -3,7 +3,7 @@ import sqlite3
 import pandas as pd
 
 
-from Journal.core.database import load_all_articles_as_df
+from core.database import load_all_articles_as_df
 
 DB_NAME = "my_journal.db"
 

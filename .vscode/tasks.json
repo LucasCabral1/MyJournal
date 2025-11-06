@@ -1,0 +1,28 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "npm run dev (frontend)",
+      "type": "npm",
+      "script": "dev",
+      "path": "frontend/my-journal", // Seu caminho está correto
+      "isBackground": true,
+      
+      // --- A CORREÇÃO ESTÁ AQUI ---
+      // Removemos o "owner" e o "pattern" genérico,
+      // deixando apenas o "background" matcher, que é o que importa.
+      "problemMatcher": {
+        "background": {
+          "activeOnStart": true,
+
+          // Continua procurando pelo sinal "Local:", 
+          // que você confirmou que aparece no seu terminal.
+          "beginsPattern": ".*(Local:).*", 
+
+          // Sinal para saber se a tarefa falhou
+          "endsPattern": ".*(Build failed|Error:).*"
+        }
+      }
+    }
+  ]
+}

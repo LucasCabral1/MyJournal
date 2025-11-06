@@ -13,6 +13,8 @@ import { LoginCard } from './components/LoginCard';
 import HomePage from './pages/Home';
 import SobrePage from './pages/Sobre';
 import ContatoPage from './pages/Contato';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+import { Toaster } from 'react-hot-toast';
 
 // Tipamos o 'page' como uma união de literais
 type PageId = 'home' | 'sobre' | 'contato';
@@ -24,6 +26,8 @@ const App: React.FC = () => {
   
   // Seu estado de página existente
   const [page, setPage] = useState<PageId>('home');
+
+  const googleClientId = "55642435247-jp588e4b6rbsaq78s9m52po87pqpe62t.apps.googleusercontent.com";
 
   const renderPage = () => {
     switch (page) {
@@ -51,51 +55,60 @@ const App: React.FC = () => {
     duration: 0.5,
   } as const;
 
-  // --- 3. O "Auth Guard" ---
-  // Se o usuário NÃO estiver autenticado, renderize a tela de login.
-  if (!isAuthenticated) {
-    return (
-      // Container para centralizar o LoginCard
-      <main className="flex items-center justify-center min-h-screen bg-gray-100">
-        <LoginCard 
-          // Passamos uma função para o LoginCard.
-          // Quando o login for bem-sucedido, o LoginCard
-          // deve chamar esta função.
-          onLoginSuccess={() => setIsAuthenticated(true)} 
-        />
-      </main>
-    );
-  }
-
-  // --- 4. O App Principal ---
-  // Se o usuário ESTIVER autenticado, renderize seu aplicativo normal.
-  return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      <Header 
-        onNavigate={(pageId) => setPage(pageId as PageId)} 
-        // Precisamos de um jeito de deslogar.
-        // Você pode adicionar um botão "Sair" no seu Header
-        // que chama esta função.
-        onLogout={() => setIsAuthenticated(false)}
+ return (
+    // O Provedor envolve TODA a aplicação
+    <GoogleOAuthProvider clientId={googleClientId}>
+      
+      {/* Usamos um operador ternário para decidir o que renderizar
+        baseado no estado 'isAu
+        thenticated'.
+      */}
+      <Toaster 
+        position="top-right" // Posição (opcional)
+        reverseOrder={false}   // Ordem (opcional)
       />
+      {!isAuthenticated ? (
+        
+        // --- O "Auth Guard" (Se NÃO estiver autenticado) ---
+        <main className="flex items-center justify-center min-h-screen bg-gray-100">
+          <LoginCard 
+            // Esta prop agora funciona como esperado, pois o LoginCard
+            // está DENTRO do GoogleOAuthProvider
+            onLoginSuccess={() => setIsAuthenticated(true)} 
+          />
+        </main>
+
+      ) : (
+
+        // --- O App Principal (Se ESTIVER autenticado) ---
+        <div className="flex flex-col min-h-screen bg-gray-50">
+          <Header 
+            onNavigate={(pageId) => setPage(pageId as PageId)} 
+            onLogout={() => setIsAuthenticated(false)}
+          />
+          
+          <AnimatePresence mode="wait">
+            <motion.main
+              key={page} 
+              variants={pageVariants}
+              initial="initial"
+              animate="in"
+              exit="out"
+              transition={pageTransition}
+              className="flex-1"
+            >
+              {renderPage()}
+            </motion.main>
+          </AnimatePresence>
+          
+          <Footer />
+        </div>
+
+      )}
       
-      <AnimatePresence mode="wait">
-        <motion.main
-          key={page} 
-          variants={pageVariants}
-          initial="initial"
-          animate="in"
-          exit="out"
-          transition={pageTransition}
-          className="flex-1"
-        >
-          {renderPage()}
-        </motion.main>
-      </AnimatePresence>
-      
-      <Footer />
-    </div>
+    </GoogleOAuthProvider> // <-- Fim do Provedor
   );
+
 }
 
 export default App;

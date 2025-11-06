@@ -1,77 +1,98 @@
 // src/components/LoginCard.tsx
 
 import React, { useState } from 'react';
-// Importando ícones para os campos e o botão do Google
-import { Mail, Lock, Chrome } from 'lucide-react';
+// <-- 1. O ícone 'Chrome' não é mais necessário aqui
+import { Mail, Lock } from 'lucide-react'; 
+// <-- 2. Importamos o componente real do Google e o tipo da resposta
+import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
+import toast from 'react-hot-toast';
 
-// 1. Definição da Interface de Props
-// <-- CORREÇÃO: Define o "contrato" de props que o componente aceita.
-// Isso resolve o erro 'Property 'onLoginSuccess' does not exist on type 'IntrinsicAttributes''.
 interface LoginCardProps {
-  onLoginSuccess: () => void; // Espera uma função passada pelo componente pai (App.tsx)
+  onLoginSuccess: () => void;
 }
 
-/**
- * Componente LoginCard
- * Um card de formulário para autenticação de usuário, oferecendo login
- * com Google, email/senha, e links para recuperação e criação de conta.
- */
-
-// 2. Assinatura da Função do Componente
-// <-- CORREÇÃO: O componente agora aceita 'props' e desestrutura 'onLoginSuccess' delas.
 export function LoginCard({ onLoginSuccess }: LoginCardProps) {
   
-  // Estados para controlar os campos de email e senha
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
 
-  // --- Funções de Handler (Lógica de Autenticação) ---
+
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleEmailLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault(); 
+    setIsLoading(true);   
+
+    try {
+      // 3. Fazer a chamada ao backend
+      const response = await fetch('http://127.0.0.1:8001/api/login', { // Mude para a URL real do seu backend
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      // 4. Verificar se a resposta do backend foi bem-sucedida
+      if (!response.ok) {
+        // Se o backend retornar um erro (ex: 401, 400),
+        // tentamos ler a mensagem de erro que ele enviou
+        const errorData = await response.json();
+        toast.error(errorData.message || 'Credenciais inválidas.');
+      }
+
+      // 5. Se o login deu certo (sucesso)
+      // O backend pode retornar um token, dados do usuário, etc.
+      // const data = await response.json(); 
+      // Ex: salvarToken(data.token);
+
+      onLoginSuccess();
+
+    } catch (err: unknown) {
+     let errorMessage = 'Ocorreu um erro inesperado.';
+  
+    if (err instanceof Error) {
+      // Isso vai pegar o erro que lançamos acima (throw new Error)
+      // ou erros de rede
+      errorMessage = err.message;
+    }
+  
+  toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   /**
-   * Manipula o envio do formulário de email e senha.
+   * Manipula o SUCESSO do login com Google.
+   * Esta função é chamada pela biblioteca, não por um 'onClick'.
    */
-  const handleEmailLogin = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); // Impede o recarregamento da página
-    console.log('Tentativa de login com:', { email, password });
-    
-    // TODO: Adicionar lógica de login real (chamar API, Firebase, etc.)
-    // Ex: if (loginFoiValido) {
-    
-    // 3. Chamar a prop
-    // <-- CORREÇÃO: Avisa o App.tsx que o login foi bem-sucedido.
+  // <-- 3. Esta é a nova função de sucesso
+  const handleGoogleSuccess = (credentialResponse: CredentialResponse) => {
+    console.log('Login com Google bem-sucedido. Resposta:', credentialResponse);
+
+    // O 'credentialResponse.credential' é o ID Token (JWT).
+    // EM PRODUÇÃO: Você DEVE enviar este token para seu backend
+    // para verificar sua autenticidade e criar uma sessão segura.
+
+    // Por enquanto, vamos apenas confirmar o sucesso no frontend.
+    // 3. Chamar a prop SÓ DEPOIS do sucesso do Google
     onLoginSuccess();
-    
-    // }
   };
 
   /**
-   * Manipula o clique no botão de login com Google.
+   * Manipula o ERRO do login com Google.
    */
-  const handleGoogleLogin = () => {
-    console.log('Iniciando login com Google...');
+  // <-- 4. Adicionamos um handler de erro
+  const handleGoogleError = () => {
+    console.error('Login com Google falhou');
+    toast.error('Erro desconhecido ao fazer login.');
     
-    // TODO: Adicionar lógica de login com Google
-    
-    // 3. Chamar a prop
-    // <-- CORREÇÃO: Avisa o App.tsx que o login foi bem-sucedido.
-    onLoginSuccess();
   };
 
-  /**
-   * Manipula o clique no link "Esqueceu a senha?".
-   */
-  const handleForgotPassword = () => {
-    console.log('Redirecionando para "Esqueci a senha" para o email:', email);
-    // TODO: Adicionar lógica de recuperação de senha
-  };
-
-  /**
-   * Manipula o clique no link "Criar uma conta".
-   */
-  const handleCreateAccount = () => {
-    console.log('Redirecionando para a página de criação de conta...');
-    // TODO: Adicionar lógica de navegação (ex: "navigate('/register')")
-  };
+  // As funções handleForgotPassword e handleCreateAccount permanecem iguais...
+  const handleForgotPassword = () => { /* ... */ };
+  const handleCreateAccount = () => { /* ... */ };
 
 
   // --- Renderização do Componente ---
@@ -79,23 +100,23 @@ export function LoginCard({ onLoginSuccess }: LoginCardProps) {
   return (
     <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-xl shadow-lg">
       
-      {/* 1. Cabeçalho */}
       <h1 className="text-3xl font-bold text-center text-gray-900">
         Acesse sua conta
       </h1>
 
-      {/* 2. Botão de Login com Google */}
-      <button
-        // 4. Conectar o Handler
-        // <-- CORREÇÃO: Conecta a função ao evento onClick.
-        onClick={handleGoogleLogin}
-        className="w-full flex items-center justify-center py-3 px-4 border border-gray-300 rounded-lg 
-                   font-medium text-gray-700 hover:bg-gray-50 transition-colors
-                   focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-      >
-        <Chrome className="w-5 h-5 mr-3" />
-        Continuar com Google
-      </button>
+      {/* 5. Botão de Login com Google SUBSTITUÍDO */}
+      {/* Este componente <GoogleLogin> renderiza o botão oficial
+        "Sign in with Google" e cuida de todo o fluxo de pop-up.
+      */}
+      <div className="w-full flex justify-center">
+        <GoogleLogin
+          onSuccess={handleGoogleSuccess} // Conecta à nossa função de sucesso
+          onError={handleGoogleError}     // Conecta à nossa função de erro
+          useOneTap                       // (Opcional) Tenta o login "um toque"
+          theme="outline"                 // (Opcional) Estilo do botão
+          size="large"                    // (Opcional) Tamanho do botão
+        />
+      </div>
 
       {/* 3. Divisor "OU" */}
       <div className="flex items-center">
@@ -106,16 +127,12 @@ export function LoginCard({ onLoginSuccess }: LoginCardProps) {
         <div className="flex-1 border-t border-gray-300"></div>
       </div>
 
-      {/* 4. Formulário de Email e Senha */}
-      {/* O 'onSubmit' já estava correto, disparando 'handleEmailLogin' */}
+      {/* 4. Formulário de Email e Senha (sem alteração) */}
       <form onSubmit={handleEmailLogin} className="space-y-4">
         
         {/* Campo de Email */}
         <div>
-          <label 
-            htmlFor="email" 
-            className="block text-sm font-medium text-gray-700"
-          >
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
             Email
           </label>
           <div className="relative mt-1">
@@ -139,10 +156,7 @@ export function LoginCard({ onLoginSuccess }: LoginCardProps) {
 
         {/* Campo de Senha */}
         <div>
-          <label 
-            htmlFor="password" 
-            className="block text-sm font-medium text-gray-700"
-          >
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
             Senha
           </label>
           <div className="relative mt-1">
@@ -167,7 +181,7 @@ export function LoginCard({ onLoginSuccess }: LoginCardProps) {
         {/* Link de "Esqueceu a senha?" */}
         <div className="text-right">
           <button
-            type="button" // Evita o submit do formulário
+            type="button" 
             onClick={handleForgotPassword}
             className="text-sm font-medium text-blue-600 hover:text-blue-500 hover:underline"
           >
@@ -178,17 +192,18 @@ export function LoginCard({ onLoginSuccess }: LoginCardProps) {
         {/* Botão de Login Principal */}
         <button
           type="submit"
+          disabled={isLoading}
           className="w-full flex items-center justify-center py-3 px-4 bg-blue-600 text-white 
                      font-semibold rounded-lg shadow-md hover:bg-blue-700 
                      focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
                      transition-colors"
         >
-          Entrar
+          {isLoading ? 'Entrando...' : 'Entrar'}
         </button>
 
       </form>
 
-      {/* 5. Link para Criar Conta */}
+      {/* 5. Link para Criar Conta (sem alteração) */}
       <p className="text-sm text-center text-gray-600">
         Não tem uma conta?{' '}
         <button

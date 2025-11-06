@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from sqlalchemy import DateTime, create_engine, Column, Integer, String, Boolean, func
+from sqlalchemy import DateTime, ForeignKey, create_engine, Column, Integer, String, Boolean, func
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship
 from dotenv import load_dotenv
@@ -29,6 +29,8 @@ class Article(Base):
     topic = Column(String, nullable=False)
     downloaded_at = Column(DateTime, nullable=False)
     generic_news = Column(Boolean)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    author = relationship("User", back_populates="articles")
 
 class User(Base):
     __tablename__ = 'users'

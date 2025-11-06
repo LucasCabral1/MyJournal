@@ -3,12 +3,13 @@ import sqlite3
 from zoneinfo import ZoneInfo 
 import pandas as pd
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import func 
+from sqlalchemy import delete, func 
 from typing import Optional, List
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
-from core.helpers import  parse_datetime
-from core.models import Article, engine
+from core.schemas import UserCreate
+from core.helpers import  get_password_hash, parse_datetime, verify_password
+from core.models import Article, User, engine
 
 
 
@@ -123,4 +124,84 @@ def save_articles_to_db(articles, topic, generic=True):
         except Exception as e:
             print(f"An error occurred during fetch: {e}")
         return []
+    
+def delete_old_articles(days_old):
+    with SessionLocal() as session:
+        try:
+            # 2. Calcula a data de corte (SQLAlchemy usa objetos datetime)
+            cutoff_date = datetime.datetime.now() - datetime.timedelta(days=days_old)
+
+            # 3. Cria a consulta DELETE usando o SQLAlchemy
+            # Isso é equivalente a: "DELETE FROM articles WHERE published_at < ?"
+            stmt = delete(Article).where(Article.published_at < cutoff_date)
+            
+            # 4. Executa a consulta
+            result = session.execute(stmt)
+            
+            # 5. Comita a transação
+            session.commit()
+            
+            print(f"\nLimpeza do banco de dados: Excluídos {result.rowcount} artigos mais antigos que {days_old} dias.")
+        
+        except Exception as e:
+            # Reverte em caso de erro
+            session.rollback()
+            print(f"Erro de banco de dados durante a exclusão: {e}")
+    
+def login(email: str, password: str) -> Optional[User]:
+    """
+    Busca um usuário por e-mail e verifica sua senha.
+    
+    Retorna o objeto 'User' se a autenticação for bem-sucedida,
+    ou 'None' se falhar.
+    """
+    session = SessionLocal()
+
+    user = session.query(User).filter(User.email == email).first()
+
+    # 2. Verifica se o usuário existe E se a senha bate
+    if not user:
+        return None
+    
+    if not verify_password(password, user.hashed_password):
+        return None
+
+   
+    return user
+
+def get_user_by_email(email: str) -> Optional[User]:
+    db = SessionLocal()
+    """ Busca um usuário pelo email. """
+    return db.query(User).filter(User.email == email).first()
+
+def get_user_by_username(username: str) -> Optional[User]:
+    db = SessionLocal()
+    """ Busca um usuário pelo nome de usuário. """
+    return db.query(User).filter(User.username == username).first()
+
+def create_db_user(user_in: UserCreate) -> User:
+    """
+    Cria o novo objeto User (modelo SQLAlchemy), hasheia a senha
+    e o salva no banco.
+    """
+    db = SessionLocal()
+    # 1. Criptografa a senha antes de salvar
+    hashed_password = get_password_hash(user_in.password)
+
+    # 2. Cria o novo objeto User
+    db_user = User(
+        username=user_in.username,
+        email=user_in.email,
+        hashed_password=hashed_password,
+        first_name=user_in.first_name,
+        last_name=user_in.last_name
+    )
+
+    # 3. Adiciona, comita e atualiza no banco
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+
+    # 4. Retorna o usuário criado
+    return db_user
                  
