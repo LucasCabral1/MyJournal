@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User } from 'lucide-react'; 
 import toast from 'react-hot-toast';
-import { useAuthStore } from '../stores/AuthStore';
+import { useAuthStore } from '../stores/authStore';
 interface RegisterCardProps {
 
   // Chamada para voltar à tela de login

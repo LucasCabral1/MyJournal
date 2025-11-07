@@ -17,7 +17,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Toaster } from 'react-hot-toast';
 import { RegisterCard } from './components/RegisterCard';
 
-import { useAuthStore } from './stores/AuthStore';
+import { useAuthStore } from './stores/authStore';
 
 // Tipamos o 'page' como uma união de literais
 type PageId = 'home' | 'sobre' | 'contato';

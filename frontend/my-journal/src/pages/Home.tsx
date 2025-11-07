@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Home, Zap, Info, Loader2, ExternalLink, AlertTriangle } from 'lucide-react';
 import Button from '../components/Button';
-import { useAuthStore } from '../stores/AuthStore'; // 1. (NOVO) Importamos o store
+import { useAuthStore } from '../stores/authStore'; // 1. (NOVO) Importamos o store
 import toast from 'react-hot-toast';
-
+import DialogoCustomizado from '../components/Dialog/Dialog';
+import { Dialog } from '@base-ui-components/react';
 // Interface para o tipo 'Article'
 interface Article {
   id: number;
@@ -178,6 +179,31 @@ const HomePage: React.FC = () => {
         </h2>
         {renderArticleContent()}
       </div>
+
+      <div className='mt-12 p-8 md:p-12 bg-white rounded-2xl shadow-xl border border-gray-100'><DialogoCustomizado
+        triggerText="Ver notificações"
+        title="Notificações"
+      >
+        {/* Isto é o 'children' */}
+        <Dialog.Description>
+          Você está em dia. Bom trabalho!
+        </Dialog.Description>
+      </DialogoCustomizado></div>
+
+      <DialogoCustomizado
+        triggerText="Editar Perfil"
+        title="Editar seu Perfil"
+      >
+        {/* Note como o 'children' agora é mais complexo */}
+        <p>Faça as alterações desejadas:</p>
+        <input 
+          type="text" 
+          placeholder="Seu nome" 
+          style={{ border: '1px solid #ccc', padding: '8px', width: '100%' }}
+        />
+        {/* Você pode passar qualquer JSX aqui */}
+      </DialogoCustomizado>
+      
     </div>
   );
 }
