@@ -7,12 +7,15 @@ import { Mail, Lock } from 'lucide-react';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
 import toast from 'react-hot-toast';
 
+import { useAuthStore } from '../stores/AuthStore';
+
 interface LoginCardProps {
-  onLoginSuccess: () => void;
+  onNavigateToRegister: () => void;
 }
 
-export function LoginCard({ onLoginSuccess }: LoginCardProps) {
+export function LoginCard({ onNavigateToRegister }: LoginCardProps) {
   
+  const setToken = useAuthStore((state) => state.setToken);
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
 
@@ -41,12 +44,17 @@ export function LoginCard({ onLoginSuccess }: LoginCardProps) {
         toast.error(errorData.message || 'Credenciais inválidas.');
       }
 
+      const data = await response.json(); 
+      
+      // 4. CHAME A FUNÇÃO DO STORE AQUI!
+      // (Assumindo que o token vem em 'data.access_token')
+      setToken(data.access_token);
+
       // 5. Se o login deu certo (sucesso)
       // O backend pode retornar um token, dados do usuário, etc.
       // const data = await response.json(); 
       // Ex: salvarToken(data.token);
 
-      onLoginSuccess();
 
     } catch (err: unknown) {
      let errorMessage = 'Ocorreu um erro inesperado.';
@@ -70,14 +78,12 @@ export function LoginCard({ onLoginSuccess }: LoginCardProps) {
   // <-- 3. Esta é a nova função de sucesso
   const handleGoogleSuccess = (credentialResponse: CredentialResponse) => {
     console.log('Login com Google bem-sucedido. Resposta:', credentialResponse);
-
-    // O 'credentialResponse.credential' é o ID Token (JWT).
-    // EM PRODUÇÃO: Você DEVE enviar este token para seu backend
-    // para verificar sua autenticidade e criar uma sessão segura.
-
-    // Por enquanto, vamos apenas confirmar o sucesso no frontend.
-    // 3. Chamar a prop SÓ DEPOIS do sucesso do Google
-    onLoginSuccess();
+    if (credentialResponse.credential) {
+      setToken(credentialResponse.credential);
+      toast.success('Login com Google bem-sucedido!');
+    } else {
+      toast.error('Credencial do Google não encontrada.');
+    }
   };
 
   /**
@@ -92,13 +98,13 @@ export function LoginCard({ onLoginSuccess }: LoginCardProps) {
 
   // As funções handleForgotPassword e handleCreateAccount permanecem iguais...
   const handleForgotPassword = () => { /* ... */ };
-  const handleCreateAccount = () => { /* ... */ };
+  //const handleCreateAccount = () => { /* ... */ };
 
 
   // --- Renderização do Componente ---
 
   return (
-    <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-xl shadow-lg">
+    <div className="w-full max-w-2xl p-8 space-y-6 bg-white rounded-xl shadow-lg">
       
       <h1 className="text-3xl font-bold text-center text-gray-900">
         Acesse sua conta
@@ -208,7 +214,7 @@ export function LoginCard({ onLoginSuccess }: LoginCardProps) {
         Não tem uma conta?{' '}
         <button
           type="button"
-          onClick={handleCreateAccount}
+          onClick={onNavigateToRegister}
           className="font-medium text-blue-600 hover:text-blue-500 hover:underline"
         >
           Crie uma aqui

@@ -1,11 +1,11 @@
-from fastapi import FastAPI, Query, status, HTTPException
+from fastapi import Depends, FastAPI, Query, status, HTTPException
 from typing import Optional, List
 from fastapi.middleware.cors import CORSMiddleware
 
 
 from core.helpers import create_access_token, get_password_hash
-from core.database import create_db_user, get_articles_with_filters, get_user_by_email, get_user_by_username, login 
-from core.schemas import Article, UserCreate, UserLoginRequest , Token
+from core.database import create_db_user, get_articles_with_filters, get_current_user, get_user_by_email, get_user_by_username, login 
+from core.schemas import Article, User, UserCreate, UserLoginRequest , Token
 
 app = FastAPI(
     title="MyJournal API",
@@ -110,4 +110,20 @@ def register_user(
 
     # 5. Retorna o token
     return {"access_token": access_token, "token_type": "bearer"}
+
+@app.get(
+    "/api/articles/me", 
+    response_model=List[Article], # Resposta será uma LISTA de artigos
+    summary="Busca todos os artigos do usuário logado"
+)
+def get_my_articles(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Este endpoint usa a dependência get_current_user para:
+    1. Exigir um token válido no header Authorization.
+    2. Decodificar o token e buscar o usuário no banco.
+    3. Injetar o objeto 'User' completo na variável 'current_user'.
+    """
+    return current_user.articles
    

@@ -1,15 +1,19 @@
 import datetime
 import sqlite3
 from zoneinfo import ZoneInfo 
+from fastapi.params import Depends
 import pandas as pd
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import delete, func 
 from typing import Optional, List
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from fastapi.security import OAuth2PasswordBearer
 
 from core.schemas import UserCreate
-from core.helpers import  get_password_hash, parse_datetime, verify_password
+from core.helpers import  decode_access_token, get_password_hash, parse_datetime, verify_password
 from core.models import Article, User, engine
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/login")
 
 
 
@@ -204,4 +208,21 @@ def create_db_user(user_in: UserCreate) -> User:
 
     # 4. Retorna o usuário criado
     return db_user
+
+def get_current_user(
+    token: str = Depends(oauth2_scheme),  
+):
+    
+    user_decode = decode_access_token(token)
+    user_id = user_decode['id']
+    
+    db = SessionLocal()    
+    # Agora buscamos o usuário no DB com o ID que estava no token
+    user = db.query(User).filter(User.id == user_id).first()
+    
+    if user is None:
+        return None
+    
+    # Se tudo deu certo, retornamos o objeto User
+    return user
                  

@@ -108,3 +108,20 @@ def create_access_token(data: dict):
     # Gera o token JWT
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+def decode_access_token(token: str) -> dict | None:
+    """
+    Decodifica um token de acesso JWT e retorna o payload.
+    
+    :param token: A string do token JWT a ser decodificado.
+    :return: Um dicionário com o payload do token se válido, ou None se inválido ou expirado.
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        print("Token expirado.")
+        return None
+    except jwt.JWTError:
+        print("Token inválido.")
+        return None
