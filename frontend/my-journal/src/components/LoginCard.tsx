@@ -27,7 +27,6 @@ export function LoginCard({ onNavigateToRegister }: LoginCardProps) {
     setIsLoading(true);   
 
     try {
-      // 3. Fazer a chamada ao backend
       const response = await fetch('http://127.0.0.1:8001/api/login', { // Mude para a URL real do seu backend
         method: 'POST',
         headers: {
@@ -36,32 +35,22 @@ export function LoginCard({ onNavigateToRegister }: LoginCardProps) {
         body: JSON.stringify({ email, password }),
       });
 
-      // 4. Verificar se a resposta do backend foi bem-sucedida
       if (!response.ok) {
-        // Se o backend retornar um erro (ex: 401, 400),
-        // tentamos ler a mensagem de erro que ele enviou
+
         const errorData = await response.json();
         toast.error(errorData.message || 'Credenciais inválidas.');
       }
 
       const data = await response.json(); 
-      
-      // 4. CHAME A FUNÇÃO DO STORE AQUI!
-      // (Assumindo que o token vem em 'data.access_token')
+      toast.success('Login realizado com sucesso!');
       setToken(data.access_token);
 
-      // 5. Se o login deu certo (sucesso)
-      // O backend pode retornar um token, dados do usuário, etc.
-      // const data = await response.json(); 
-      // Ex: salvarToken(data.token);
 
 
     } catch (err: unknown) {
      let errorMessage = 'Ocorreu um erro inesperado.';
   
     if (err instanceof Error) {
-      // Isso vai pegar o erro que lançamos acima (throw new Error)
-      // ou erros de rede
       errorMessage = err.message;
     }
   
@@ -71,11 +60,7 @@ export function LoginCard({ onNavigateToRegister }: LoginCardProps) {
     }
   };
 
-  /**
-   * Manipula o SUCESSO do login com Google.
-   * Esta função é chamada pela biblioteca, não por um 'onClick'.
-   */
-  // <-- 3. Esta é a nova função de sucesso
+
   const handleGoogleSuccess = (credentialResponse: CredentialResponse) => {
     console.log('Login com Google bem-sucedido. Resposta:', credentialResponse);
     if (credentialResponse.credential) {
@@ -86,23 +71,14 @@ export function LoginCard({ onNavigateToRegister }: LoginCardProps) {
     }
   };
 
-  /**
-   * Manipula o ERRO do login com Google.
-   */
-  // <-- 4. Adicionamos um handler de erro
+
   const handleGoogleError = () => {
     console.error('Login com Google falhou');
     toast.error('Erro desconhecido ao fazer login.');
     
   };
 
-  // As funções handleForgotPassword e handleCreateAccount permanecem iguais...
   const handleForgotPassword = () => { /* ... */ };
-  //const handleCreateAccount = () => { /* ... */ };
-
-
-  // --- Renderização do Componente ---
-
   return (
     <div className="w-full max-w-2xl p-8 space-y-6 bg-white rounded-xl shadow-lg">
       
@@ -110,21 +86,16 @@ export function LoginCard({ onNavigateToRegister }: LoginCardProps) {
         Acesse sua conta
       </h1>
 
-      {/* 5. Botão de Login com Google SUBSTITUÍDO */}
-      {/* Este componente <GoogleLogin> renderiza o botão oficial
-        "Sign in with Google" e cuida de todo o fluxo de pop-up.
-      */}
       <div className="w-full flex justify-center">
         <GoogleLogin
-          onSuccess={handleGoogleSuccess} // Conecta à nossa função de sucesso
-          onError={handleGoogleError}     // Conecta à nossa função de erro
-          useOneTap                       // (Opcional) Tenta o login "um toque"
-          theme="outline"                 // (Opcional) Estilo do botão
-          size="large"                    // (Opcional) Tamanho do botão
+          onSuccess={handleGoogleSuccess} 
+          onError={handleGoogleError}     
+          useOneTap                       
+          theme="outline"                 
+          size="large"                    
         />
       </div>
 
-      {/* 3. Divisor "OU" */}
       <div className="flex items-center">
         <div className="flex-1 border-t border-gray-300"></div>
         <span className="px-4 text-sm font-medium text-gray-500">
@@ -133,10 +104,8 @@ export function LoginCard({ onNavigateToRegister }: LoginCardProps) {
         <div className="flex-1 border-t border-gray-300"></div>
       </div>
 
-      {/* 4. Formulário de Email e Senha (sem alteração) */}
       <form onSubmit={handleEmailLogin} className="space-y-4">
         
-        {/* Campo de Email */}
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700">
             Email
@@ -160,7 +129,6 @@ export function LoginCard({ onNavigateToRegister }: LoginCardProps) {
           </div>
         </div>
 
-        {/* Campo de Senha */}
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-gray-700">
             Senha
@@ -184,7 +152,6 @@ export function LoginCard({ onNavigateToRegister }: LoginCardProps) {
           </div>
         </div>
 
-        {/* Link de "Esqueceu a senha?" */}
         <div className="text-right">
           <button
             type="button" 
@@ -195,7 +162,6 @@ export function LoginCard({ onNavigateToRegister }: LoginCardProps) {
           </button>
         </div>
 
-        {/* Botão de Login Principal */}
         <button
           type="submit"
           disabled={isLoading}
@@ -209,7 +175,6 @@ export function LoginCard({ onNavigateToRegister }: LoginCardProps) {
 
       </form>
 
-      {/* 5. Link para Criar Conta (sem alteração) */}
       <p className="text-sm text-center text-gray-600">
         Não tem uma conta?{' '}
         <button

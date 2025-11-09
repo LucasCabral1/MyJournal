@@ -4,9 +4,9 @@ import styles from './dialog-styles.module.css'; // Vou assumir que o CSS é o m
 
 // Definimos os tipos de props que nosso componente aceitará
 interface DialogoCustomizadoProps {
-  triggerText: string;
+  triggerText: React.ReactNode | string;
   title: string;
-  children: React.ReactNode; // Permite passar qualquer elemento React
+  children: React.ReactNode;
 }
 
 export default function DialogoCustomizado({
@@ -16,19 +16,15 @@ export default function DialogoCustomizado({
 }: DialogoCustomizadoProps) {
   return (
     <Dialog.Root>
-      {/* Usamos a prop 'triggerText' aqui */}
       <Dialog.Trigger className={styles.Button}>{triggerText}</Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Backdrop className={styles.Backdrop} />
         <Dialog.Popup className={styles.Popup}>
           
-          {/* Usamos a prop 'title' aqui */}
+
           <Dialog.Title className={styles.Title}>{title}</Dialog.Title>
 
-          {/* 'children' é renderizado aqui. 
-            Qualquer JSX que você passar entre <DialogoCustomizado>...</DialogoCustomizado>
-            será inserido neste local.
-          */}
+  
           <div>{children}</div>
 
           <div className={styles.Actions}>

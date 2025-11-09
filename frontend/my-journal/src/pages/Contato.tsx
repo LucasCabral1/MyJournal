@@ -4,11 +4,9 @@ import Button from '../components/Button';
 
 const ContatoPage: React.FC = () => {
   
-  // Função para lidar com o envio do formulário
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault(); // Impede o recarregamento da página
+    event.preventDefault(); 
     console.log("Formulário enviado! (Lógica de envio não implementada)");
-    // Aqui você adicionaria a lógica para enviar os dados para um backend
   };
 
   return (
@@ -23,8 +21,6 @@ const ContatoPage: React.FC = () => {
         <p className="text-lg text-gray-600 mb-6">
           Adoraríamos ouvir você! Preencha o formulário abaixo.
         </p>
-        
-        {/* Usamos o plugin @tailwindcss/forms para estilizar os inputs */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
@@ -48,7 +44,6 @@ const ContatoPage: React.FC = () => {
           </div>
           <div>
             <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">Mensagem</label>
-            {/* CORREÇÃO: 'rows' deve ser um número (TypeScript) */}
             <textarea
               id="message"
               rows={4}
@@ -58,7 +53,6 @@ const ContatoPage: React.FC = () => {
             ></textarea>
           </div>
           <div>
-            {/* Definimos o tipo 'submit' e a variante 'success' */}
             <Button type="submit" variant="success" icon={<Server size={18} />}>
               Enviar Mensagem
             </Button>

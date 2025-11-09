@@ -6,7 +6,6 @@ import toast from 'react-hot-toast';
 import { useAuthStore } from '../stores/authStore';
 interface RegisterCardProps {
 
-  // Chamada para voltar à tela de login
   onNavigateToLogin: () => void;
 }
 
@@ -31,8 +30,8 @@ export function RegisterCard({ onNavigateToLogin }: RegisterCardProps) {
     setIsLoading(true);   
 
     try {
-      // 1. Fazer a chamada ao backend para REGISTRAR
-      const response = await fetch('http://127.0.0.1:8001/api/register', { // Mude para a URL real do seu backend
+     
+      const response = await fetch('http://127.0.0.1:8001/api/register', { 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -40,7 +39,6 @@ export function RegisterCard({ onNavigateToLogin }: RegisterCardProps) {
         body: JSON.stringify({ username: name, email, password }),
       });
 
-      // 2. Verificar se a resposta do backend foi bem-sucedida
       if (!response.ok) {
         const errorData = await response.json();
         toast.error(errorData.message || 'Não foi possível criar a conta.');
@@ -49,7 +47,6 @@ export function RegisterCard({ onNavigateToLogin }: RegisterCardProps) {
       const data = await response.json();
       toast.success('Conta criada com sucesso!');
 
-      // 4. CHAME A FUNÇÃO DO STORE AQUI!
       setToken(data.access_token);
 
     
@@ -74,7 +71,6 @@ export function RegisterCard({ onNavigateToLogin }: RegisterCardProps) {
 
       <form onSubmit={handleRegister} className="space-y-4">
         
-        {/* Campo de Nome */}
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-gray-700">
             Nome
@@ -98,7 +94,6 @@ export function RegisterCard({ onNavigateToLogin }: RegisterCardProps) {
           </div>
         </div>
 
-        {/* Campo de Email */}
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700">
             Email
@@ -121,8 +116,6 @@ export function RegisterCard({ onNavigateToLogin }: RegisterCardProps) {
             />
           </div>
         </div>
-
-        {/* Campo de Senha */}
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-gray-700">
             Senha
@@ -145,7 +138,6 @@ export function RegisterCard({ onNavigateToLogin }: RegisterCardProps) {
           </div>
         </div>
 
-        {/* Campo de Confirmar Senha */}
         <div>
           <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
             Confirmar Senha
@@ -168,7 +160,6 @@ export function RegisterCard({ onNavigateToLogin }: RegisterCardProps) {
           </div>
         </div>
 
-        {/* Botão de Registro Principal */}
         <button
           type="submit"
           disabled={isLoading}
@@ -182,12 +173,11 @@ export function RegisterCard({ onNavigateToLogin }: RegisterCardProps) {
 
       </form>
 
-      {/* 5. Link para voltar ao Login */}
       <p className="text-sm text-center text-gray-600">
         Já tem uma conta?{' '}
         <button
           type="button"
-          onClick={onNavigateToLogin} // Chama a prop para voltar
+          onClick={onNavigateToLogin}
           className="font-medium text-blue-600 hover:text-blue-500 hover:underline"
         >
           Entre aqui

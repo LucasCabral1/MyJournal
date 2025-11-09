@@ -19,15 +19,14 @@ import { RegisterCard } from './components/RegisterCard';
 
 import { useAuthStore } from './stores/authStore';
 
-// Tipamos o 'page' como uma união de literais
+
 type PageId = 'home' | 'sobre' | 'contato';
 type AuthView = 'login' | 'register';
 
 const App: React.FC = () => {
   const token = useAuthStore((state) => state.token);
   const isAuthenticated = !!token;
-  
-  // Seu estado de página existente
+
   const [page, setPage] = useState<PageId>('home');
   const [authView, setAuthView] = useState<AuthView>('login');
 
@@ -48,7 +47,7 @@ const App: React.FC = () => {
 
   const handleLogout = useAuthStore((state) => state.clearToken);
 
-  // Suas animações (sem alteração)
+
   const pageVariants = {
     initial: { opacity: 0, y: 20 },
     in: { opacity: 1, y: 0 },
@@ -68,23 +67,17 @@ const App: React.FC = () => {
   };
 
  return (
-    // O Provedor envolve TODA a aplicação
     <GoogleOAuthProvider clientId={googleClientId}>
-      
-      {/* Usamos um operador ternário para decidir o que renderizar
-        baseado no estado 'isAu
-        thenticated'.
-      */}
+
       <Toaster 
-        position="top-right" // Posição (opcional)
-        reverseOrder={false}   // Ordem (opcional)
+        position="top-right" 
+        reverseOrder={false}   
       />
       {!isAuthenticated ? (
         
         <main className="flex items-center justify-center min-h-screen bg-gray-100">
           <AnimatePresence mode="wait">
             {authView === 'login' ? (
-              // 6. Se authView for 'login', mostra o LoginCard
               <motion.div
                 key="login"
                 variants={authCardVariants}
@@ -94,12 +87,11 @@ const App: React.FC = () => {
                 className='w-full max-w-md'
                 transition={{ duration: 0.2 }}
               >
-                <LoginCard 
-                  onNavigateToRegister={() => setAuthView('register')} // Passa a função para mudar o estado
+                <LoginCard
+                  onNavigateToRegister={() => setAuthView('register')} 
                 />
               </motion.div>
             ) : (
-              // 7. Se authView for 'register', mostra o RegisterCard
               <motion.div
                 key="register"
                 variants={authCardVariants}
@@ -110,7 +102,7 @@ const App: React.FC = () => {
                 transition={{ duration: 0.2 }}
               >
                 <RegisterCard
-                  onNavigateToLogin={() => setAuthView('login')}     // Passa a função para voltar
+                  onNavigateToLogin={() => setAuthView('login')}  
                 />
               </motion.div>
             )}
@@ -119,13 +111,12 @@ const App: React.FC = () => {
 
       ) : (
 
-        // --- O App Principal (Se ESTIVER autenticado) ---
         <div className="flex flex-col min-h-screen bg-gray-50">
           <Header 
             onNavigate={(pageId) => setPage(pageId as PageId)} 
             onLogout={() => {
               handleLogout();
-              setAuthView('login'); // Reseta a view de auth
+              setAuthView('login'); 
             }}
           />
           
@@ -148,7 +139,7 @@ const App: React.FC = () => {
 
       )}
       
-    </GoogleOAuthProvider> // <-- Fim do Provedor
+    </GoogleOAuthProvider>
   );
 
 }

@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Home, Zap, Info, Loader2, ExternalLink, AlertTriangle } from 'lucide-react';
+import {  Zap, Info, ExternalLink, AlertTriangle, Newspaper } from 'lucide-react';
 import Button from '../components/Button';
-import { useAuthStore } from '../stores/authStore'; // 1. (NOVO) Importamos o store
+import { useAuthStore } from '../stores/authStore'; 
 import toast from 'react-hot-toast';
-import DialogoCustomizado from '../components/Dialog/Dialog';
-import { Dialog } from '@base-ui-components/react';
-// Interface para o tipo 'Article'
+import ValidadeUrl from '../components/ValidateUrl';
+import Loader from '../components/Loading/Loading';
 interface Article {
   id: number;
   title: string;
@@ -15,41 +14,38 @@ interface Article {
   published_at: string;
 }
 
-// URL Base da sua API (inferida da URL de login)
 const API_BASE_URL = 'http://127.0.0.1:8001/api';
 
 const HomePage: React.FC = () => {
-  // Estados do componente (como antes)
   const [articles, setArticles] = useState<Article[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 2. (NOVO) Pegamos o token diretamente do store do Zustand
   const token = useAuthStore((state) => state.token); //
 
   useEffect(() => {
     const fetchArticles = async () => {
       try {
-        // 3. (ATUALIZADO) Verificamos se o token existe no store
-        if (!token) { //
+
+        if (!token) {
           throw new Error('Usuário não autenticado. Por favor, faça login.');
         }
 
-        // 4. (ATUALIZADO) Usamos a URL correta da API
         const response = await fetch(`${API_BASE_URL}/articles/me`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            // Usamos o token pego do store
             'Authorization': `Bearer ${token}`
           }
         });
 
         if (response.status === 401) {
+          toast.error('Sessão expirada. Por favor, faça login novamente.');
           throw new Error('Sessão expirada. Por favor, faça login novamente.');
         }
 
         if (!response.ok) {
+            toast.error('Falha ao buscar os artigos.');
           throw new Error('Falha ao buscar os artigos.');
         }
 
@@ -63,30 +59,25 @@ const HomePage: React.FC = () => {
         setError(errorMessage);
         toast.error(errorMessage);
       } finally {
-        setIsLoading(false);
+        setIsLoading(true);
       }
     };
 
     fetchArticles();
-  }, [token]); // 5. (NOVO) Adicionamos 'token' como dependência
-               // Se o token mudar (ex: login/logout), o useEffect roda de novo.
-
-  // (O resto do seu componente: 'renderArticleContent', 'return', etc.
-  // permanece exatamente o mesmo do exemplo anterior)
-
-  // ... (função renderArticleContent() idêntica à anterior) ...
+  }, [token]); 
   const renderArticleContent = () => {
-    // Caso 1: Carregando
+
     if (isLoading) {
       return (
         <div className="flex justify-center items-center py-10 text-gray-500">
-          <Loader2 size={24} className="animate-spin" />
-          <span className="ml-2">Carregando seus artigos...</span>
+          <div className="flex justify-center items-center h-96">
+          <Loader size="lg" />
+          </div>
         </div>
       );
     }
 
-    // Caso 2: Erro
+
     if (error) {
       return (
         <div className="flex justify-center items-center py-10 text-red-600 bg-red-50 p-4 rounded-lg">
@@ -96,7 +87,6 @@ const HomePage: React.FC = () => {
       );
     }
 
-    // Caso 3: Sucesso, mas sem artigos
     if (articles.length === 0) {
       return (
         <div className="text-center py-10 text-gray-500">
@@ -105,7 +95,6 @@ const HomePage: React.FC = () => {
       );
     }
 
-    // Caso 4: Sucesso com artigos (renderiza a tabela)
     return (
       <div className="overflow-x-auto relative shadow-md sm:rounded-lg">
         <table className="w-full text-sm text-left text-gray-500">
@@ -130,7 +119,7 @@ const HomePage: React.FC = () => {
                 <td className="py-4 px-6">
                   <a
                     href={article.url}
-                    target="_blank" // Abre em nova aba
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center font-medium text-cyan-600 hover:underline"
                   >
@@ -145,10 +134,9 @@ const HomePage: React.FC = () => {
     );
   };
 
-  // O return principal (sem alterações)
+
   return (
     <div className="container mx-auto my-12 px-4">
-      {/* Bloco de Boas-Vindas */}
       <div className="p-8 md:p-12 bg-white rounded-2xl shadow-xl border border-gray-100 text-center">
         <motion.div
           initial={{ scale: 0.5, opacity: 0 }}
@@ -156,13 +144,13 @@ const HomePage: React.FC = () => {
           transition={{ duration: 0.5, type: 'spring', stiffness: 120 }}
           className="inline-flex items-center justify-center p-4 bg-cyan-100 text-cyan-700 rounded-full mb-6"
         >
-          <Home size={40} />
+         <Newspaper size={30} />
         </motion.div>
         <h1 className="text-4xl md:text-5xl font-bold text-gray-900">
-          Bem-vindo ao <span className="text-cyan-600">Meu Primeiro Site React</span>!
+          Bem-vindo ao <span className="text-cyan-600">MyJournal</span>
         </h1>
         <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mt-4 mb-8">
-          Este é um exemplo de como construir um site moderno e rápido usando React, Vite e Tailwind CSS.
+          Seu agregador de notícias diário, feito sob medida para seus interesses.
         </p>
         <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
           <Button icon={<Zap size={18} />}>Comece Agora</Button>
@@ -172,7 +160,6 @@ const HomePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Seção da Tabela de Artigos */}
       <div className="mt-12 p-8 md:p-12 bg-white rounded-2xl shadow-xl border border-gray-100">
         <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">
           Seus Artigos Salvos
@@ -180,29 +167,11 @@ const HomePage: React.FC = () => {
         {renderArticleContent()}
       </div>
 
-      <div className='mt-12 p-8 md:p-12 bg-white rounded-2xl shadow-xl border border-gray-100'><DialogoCustomizado
-        triggerText="Ver notificações"
-        title="Notificações"
-      >
-        {/* Isto é o 'children' */}
-        <Dialog.Description>
-          Você está em dia. Bom trabalho!
-        </Dialog.Description>
-      </DialogoCustomizado></div>
+      <div className='mt-12 p-8 md:p-12 bg-white rounded-2xl shadow-xl border border-gray-100'>
+        <ValidadeUrl />
+        </div>
 
-      <DialogoCustomizado
-        triggerText="Editar Perfil"
-        title="Editar seu Perfil"
-      >
-        {/* Note como o 'children' agora é mais complexo */}
-        <p>Faça as alterações desejadas:</p>
-        <input 
-          type="text" 
-          placeholder="Seu nome" 
-          style={{ border: '1px solid #ccc', padding: '8px', width: '100%' }}
-        />
-        {/* Você pode passar qualquer JSX aqui */}
-      </DialogoCustomizado>
+      
       
     </div>
   );
