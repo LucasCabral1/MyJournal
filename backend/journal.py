@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import feedparser
 from email.utils import mktime_tz, parsedate_tz
 
-from core.database import delete_old_articles, save_articles_to_db
+from core.database import SessionLocal, create_journal, delete_old_articles, save_articles_to_db
 from core import models 
 
 load_dotenv()
@@ -15,29 +15,6 @@ load_dotenv()
 # --- CONFIGURATION ---
 API_KEY = os.getenv("API_KEY")
 DB_NAME = "my_journal.db"
-TOPICS = ["sports", "technology", "business", "general"]
-RSS_FEEDS = [
-    {
-        "name": "iclnoticias.com.br", 
-        "url": "https://iclnoticias.com.br/feed/",
-        "topic": "politics"
-    },
-    {
-        "name": "meutimao.com.br", 
-        "url": "https://www.meutimao.com.br/rss/",
-        "topic": "sports"
-    },
-    {
-        "name": "brasildefato.com.br", 
-        "url": "https://www.brasildefato.com.br/feed/",
-        "topic": "politics"
-    },
-    {
-        "name": "www.cartacapital.com.br", 
-        "url": "https://www.cartacapital.com.br/feed/",
-        "topic": "politics"
-    }
-]
 NEWS_LIMIT_PER_TOPIC = 10
 DAYS_TO_KEEP_ARTICLES = 30
 
@@ -115,31 +92,52 @@ def fetch_news_from_rss(feed_url, limit):
 
 
 
+def update_feeds_for_user(db: requests.Session, user: models.User):
+    print(f"Iniciando atualização de feeds para o usuário: {user.id} ({user.email})")
+    total_articles_saved = 0
+    
 
-def main():
-    print("Starting MyJournal...")
-    models.setup_database_orm()
-    
-    print("Fetching news articles...")
-    for topic in TOPICS:
-        print(f"- Fetching topic: '{topic}'")
-        articles = fetch_news(API_KEY, topic, NEWS_LIMIT_PER_TOPIC)
-        save_articles_to_db(articles, topic)
-        time.sleep(1) 
-    
-    print("\nFetching news from specific sites (RSS)...")
-    for rss in RSS_FEEDS:
-        print(f"- Fetching from RSS: '{rss["name"]}'")
-        articles = fetch_news_from_rss(rss["url"], NEWS_LIMIT_PER_TOPIC)
-        save_articles_to_db(articles, rss["topic"], generic=False)
-        time.sleep(1)
+    for journal in user.journals:
+        if not journal.rss:
+            print(f"  > Pulando Journal ID {journal.id} (sem RSS URL)")
+            continue
+
+        print(f"\n- Processando Journal: '{journal.name}' (ID: {journal.id})")
+        print(f"  > URL RSS: {journal.rss}")
         
-    print("\nFetching news from specific sites...")
+        articles = fetch_news_from_rss(journal.rss, NEWS_LIMIT_PER_TOPIC)
+        
+        if not articles:
+            print("  > Nenhum artigo novo encontrado.")
+            continue
+        
+        try:
+            num_saved = save_articles_to_db(
+                db=db,
+                articles=articles, 
+                topic=None, 
+                journal_id=journal.id, 
+                generic=False,
+                user_id=user.id 
+            )
+            
+            
+            if num_saved is None:
+                num_saved = len(articles) 
+                
+            print(f"  > {num_saved} novos artigos salvos.")
+            total_articles_saved += num_saved
+        
+        except Exception as e:
+            print(f"  > [ERRO] Falha ao salvar artigos para o journal {journal.id}: {e}")
+            
+        
+        time.sleep(1)
 
-
-    delete_old_articles(DAYS_TO_KEEP_ARTICLES)
+    print(f"\nAtualização concluída para o usuário {user.id}. Total de {total_articles_saved} novos artigos salvos.")
     
-    print("\nMyJournal run complete.")
-
-if __name__ == "__main__":
-    main()
+    return {
+        "status": "success", 
+        "user_id": user.id, 
+        "new_articles_found": total_articles_saved
+    }

@@ -1,11 +1,21 @@
+# api.py
+
+import select
 from fastapi import Depends, FastAPI, Query, status, HTTPException
 from typing import Optional, List
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session, selectinload
 
 
-from core.helpers import create_access_token, get_password_hash
-from core.database import create_db_user, get_articles_with_filters, get_current_user, get_user_by_email, get_user_by_username, login 
-from core.schemas import Article, User, UserCreate, UserLoginRequest , Token
+from core import models
+from journal import update_feeds_for_user
+from core.database import (
+    create_db_user, create_journal, get_articles_with_filters, 
+    get_current_user, get_db,  
+    get_user_by_email, get_user_by_username, login
+)
+from core.helpers import create_access_token, discover_rss_feed, get_password_hash
+from core.schemas import Article, JournalCreateRequest, JournalCreateResponse, User, UserCreate, UserLoginRequest , Token, Journal
 
 app = FastAPI(
     title="MyJournal API",
@@ -13,27 +23,31 @@ app = FastAPI(
     version="1.0.0"
 )
 origins = [
-    "http://localhost:3000", # Porta padrão do Create React App
-    "http://localhost:5173", # Porta padrão do Vite
-    "http://localhost:5174", # Outra porta comum do Vite
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:5174",
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,       # Permite estas origens
-    allow_credentials=True,    # Permite cookies
-    allow_methods=["*"],       # Permite todos os métodos (GET, POST, etc.)
-    allow_headers=["*"],       # Permite todos os cabeçalhos
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+
+models.setup_database_orm()
 
 @app.get("/articles/", response_model=List[Article])
 def read_articles(
+    db: Session = Depends(get_db),
     topics: Optional[List[str]] = Query(None),
     sources: Optional[List[str]] = Query(None),
     search: Optional[str] = Query(None, alias="title_search"),
     generic: Optional[bool] = Query(None, alias="generic_news")
 ):
     articles_data = get_articles_with_filters(
+        db=db, 
         topics=topics,
         sources=sources,
         title_search=search,
@@ -43,22 +57,20 @@ def read_articles(
 
 @app.post("/api/login/", response_model=Token)
 def login_for_user(
-    credentials: UserLoginRequest
+    credentials: UserLoginRequest,
+    db: Session = Depends(get_db)
 ):
-    """
-    Autentica um usuário e retorna seus dados.
-    """
     user = login( 
+        db=db,
         email=credentials.email, 
         password=credentials.password
     )
     
-    # Se 'authenticate_user' retornar None, o login falhou.
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email ou senha incorretos",
-            headers={"WWW-Authenticate": "Bearer"}, # Padrão para login
+            headers={"WWW-Authenticate": "Bearer"},
         )
     
     access_token = create_access_token(
@@ -68,62 +80,132 @@ def login_for_user(
     }
     )
     
-    # Retorna o token para o cliente
     return {"access_token": access_token, "token_type": "bearer"}
 
 @app.post("/api/register/", response_model=Token, status_code=status.HTTP_201_CREATED)
 def register_user(
-    user_in: UserCreate
+    user_in: UserCreate,
+    db: Session = Depends(get_db) 
 ):
-    """
-    Cria (registra) um novo usuário e retorna um token de acesso.
-    """
+    try:
+        user_exists = get_user_by_email(db=db, email=user_in.email) 
+        if user_exists:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Este email já está cadastrado."
+            )
+            
+        user_exists = get_user_by_username(db=db, username=user_in.username) 
+        if user_exists:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Este nome de usuário já está em uso."
+            )
+
+        db_user = create_db_user(db=db, user_in=user_in) 
+
+        db.commit() 
+
+        access_token = create_access_token(
+            data={
+                "sub": db_user.email, 
+                "username": db_user.username,
+                "id": db_user.id 
+            }
+        )
+
+        return {"access_token": access_token, "token_type": "bearer"}
     
-    # 1. Verifica se o email já está em uso (usando o serviço)
-    user_exists = get_user_by_email(email=user_in.email)
-    if user_exists:
+    except Exception as e:
+        db.rollback() 
+        if isinstance(e, HTTPException):
+            raise e
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Este email já está cadastrado."
-        )
-        
-    # 2. Verifica se o username já está em uso (usando o serviço)
-    user_exists = get_user_by_username(username=user_in.username)
-    if user_exists:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Este nome de usuário já está em uso."
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao criar usuário: {e}"
         )
 
-    # 3. Cria o usuário no banco (usando o serviço)
-    # Esta função agora lida com o hash da senha e o db.commit()
-    db_user = create_db_user(user_in=user_in)
-
-    # 4. Cria o token de acesso para o novo usuário
-    access_token = create_access_token(
-        data={
-            "sub": db_user.email, 
-            "username": db_user.username,
-            "id": db_user.id 
-        }
-    )
-
-    # 5. Retorna o token
-    return {"access_token": access_token, "token_type": "bearer"}
 
 @app.get(
     "/api/articles/me", 
-    response_model=List[Article], # Resposta será uma LISTA de artigos
-    summary="Busca todos os artigos do usuário logado"
+    response_model=List[Article],
+)
+def get_my_articles(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    articles = db.query(models.Article).filter(
+        models.Article.user_id == current_user.id
+    ).options(
+        selectinload(models.Article.journal) 
+    ).order_by(
+        models.Article.published_at.desc() 
+    ).all()
+    return articles
+
+@app.post(
+    "/api/journal", 
+    response_model=JournalCreateResponse,
+)
+def add_user_journal(
+    request_data: JournalCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    url_str = str(request_data.url)
+
+    try:
+        discovered_rss_url_str = discover_rss_feed(url_str)
+            
+        for existing_journal in current_user.journals:
+            if existing_journal.rss == discovered_rss_url_str:
+                return existing_journal
+
+        journal_to_add = create_journal(
+            db=db, 
+            rss_url=discovered_rss_url_str,
+            url=request_data.url
+        )
+
+        current_user.journals.append(journal_to_add)
+        
+        db.commit()
+        db.refresh(journal_to_add) 
+        
+        return journal_to_add
+
+    except ValueError as e:
+        db.rollback() 
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Um erro inesperado ocorreu ao associar o journal: {str(e)}"
+        )
+        
+        
+@app.get(
+    "/api/journal/me", 
+    response_model=List[JournalCreateResponse],
 )
 def get_my_articles(
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Este endpoint usa a dependência get_current_user para:
-    1. Exigir um token válido no header Authorization.
-    2. Decodificar o token e buscar o usuário no banco.
-    3. Injetar o objeto 'User' completo na variável 'current_user'.
-    """
-    return current_user.articles
-   
+    return current_user.journals
+
+@app.post("/api/articles/me/refresh", response_model=dict)
+def update_my_journal_feeds(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+
+    try:
+        result = update_feeds_for_user(db=db, user=current_user)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Falha ao atualizar feeds: {e}")
+

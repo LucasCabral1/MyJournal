@@ -1,13 +1,16 @@
 
 from datetime import datetime, timedelta, timezone
 import os
+import ssl
 from dotenv import load_dotenv
+import feedparser
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from dateutil import parser
 from passlib.context import CryptContext
 from jose import jwt
+import feedfinder2
 
 load_dotenv()
 
@@ -110,12 +113,6 @@ def create_access_token(data: dict):
     return encoded_jwt
 
 def decode_access_token(token: str) -> dict | None:
-    """
-    Decodifica um token de acesso JWT e retorna o payload.
-    
-    :param token: A string do token JWT a ser decodificado.
-    :return: Um dicionário com o payload do token se válido, ou None se inválido ou expirado.
-    """
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
@@ -125,3 +122,43 @@ def decode_access_token(token: str) -> dict | None:
     except jwt.JWTError:
         print("Token inválido.")
         return None
+    
+def validate_and_parse_feed(rss_url: str) -> str:  
+
+    if hasattr(ssl, '_create_unverified_context'):
+        ssl._create_default_https_context = ssl._create_unverified_context
+
+    try:
+        feed = feedparser.parse(rss_url)
+
+        if feed.bozo:
+            raise ValueError(f"Jornal indisponível ou inválido: {rss_url}")
+
+        feed_title = feed.feed.get("title")
+        if not feed_title:
+            raise ValueError("Jornal indisponível ou inválido: {rss_url}")
+
+        return feed_title
+
+    except Exception as e:
+        if isinstance(e, ValueError):
+            raise e
+        
+        raise ValueError(f"Jornal indisponível ou inválido: {rss_url}")
+    
+
+def discover_rss_feed(website_url: str) -> str:
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+    
+    try:
+        feeds = feedfinder2.find_feeds(website_url, user_agent=headers['User-Agent'])
+        
+        if not feeds:
+            raise ValueError(f"Nenhum feed RSS pôde ser encontrado em '{website_url}'")
+        
+        return feeds[0]
+        
+    except requests.exceptions.RequestException as e:
+        raise ValueError(f"Erro de rede ao tentar acessar '{website_url}': {e}")

@@ -30,6 +30,23 @@ const HomePage: React.FC = () => {
         if (!token) {
           throw new Error('Usuário não autenticado. Por favor, faça login.');
         }
+        const responseRefresh = await fetch(`${API_BASE_URL}/articles/me/refresh`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (responseRefresh.status === 401) {
+          toast.error('Sessão expirada. Por favor, faça login novamente.');
+          throw new Error('Sessão expirada. Por favor, faça login novamente.');
+        }
+
+        if (!responseRefresh.ok) {
+            toast.error('Falha ao buscar os artigos atualizados.');
+          throw new Error('Falha ao buscar os artigos atualizados.');
+        }
 
         const response = await fetch(`${API_BASE_URL}/articles/me`, {
           method: 'GET',
@@ -59,7 +76,7 @@ const HomePage: React.FC = () => {
         setError(errorMessage);
         toast.error(errorMessage);
       } finally {
-        setIsLoading(true);
+        setIsLoading(false);
       }
     };
 
