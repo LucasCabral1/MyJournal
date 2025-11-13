@@ -8,6 +8,7 @@ type ButtonProps = {
   variant?: ButtonVariant;
   icon?: React.ReactNode;
   type?: 'button' | 'submit' | 'reset'; 
+  disabled?: boolean;
 };
 
 const Button: React.FC<ButtonProps> = ({ 
@@ -15,7 +16,8 @@ const Button: React.FC<ButtonProps> = ({
   onClick, 
   variant = 'primary', 
   icon, 
-  type = 'button' 
+  type = 'button' ,
+  disabled = false
 }) => {
   
 
@@ -30,7 +32,7 @@ const Button: React.FC<ButtonProps> = ({
   const buttonClass = `${baseClasses} ${variantClasses[variant]}`;
 
   return (
-    <button type={type} onClick={onClick} className={buttonClass}>
+    <button type={type} onClick={onClick} className={buttonClass} disabled={disabled}>
       {icon && <span className="mr-2">{icon}</span>}
       <span>{children}</span>
     </button>

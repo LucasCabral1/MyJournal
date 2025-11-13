@@ -1,11 +1,16 @@
+import mimetypes
 import os
 import sqlite3
+import uuid
+from bs4 import BeautifulSoup
 import requests
 import datetime
 import time
 from dotenv import load_dotenv
 import feedparser
 from email.utils import mktime_tz, parsedate_tz
+
+import urllib
 
 from core.database import SessionLocal, create_journal, delete_old_articles, save_articles_to_db
 from core import models 
@@ -17,6 +22,8 @@ API_KEY = os.getenv("API_KEY")
 DB_NAME = "my_journal.db"
 NEWS_LIMIT_PER_TOPIC = 10
 DAYS_TO_KEEP_ARTICLES = 30
+STATIC_DIR = "static/article_images"
+os.makedirs(STATIC_DIR, exist_ok=True)
 
 
 
@@ -74,12 +81,102 @@ def fetch_news_from_rss(feed_url, limit):
                  published_time_iso = format_rss_time_to_iso(published_time)
             else:
                  published_time_iso = published_time
+                 
+            topic = None
+            if entry.get('tags'):
+                topic = entry.tags[0].get('term')
+                
+            author = entry.get('author', None)
+            
+            summary_text = None
+
+            summary_html = entry.get('summary', entry.get('description', ''))
+            
+            if summary_html:
+                soup = BeautifulSoup(summary_html, 'html.parser')
+                summary_text = soup.get_text(separator=" ", strip=True)
+
+    
+            original_image_url = None
+
+
+            if entry.get('media_content'):
+                media_images = [
+                    m.get('url') for m in entry.media_content 
+                    if m.get('medium') == 'image' and m.get('url')
+                ]
+                if media_images: original_image_url = media_images[0]
+
+
+            if not original_image_url and entry.get('enclosures'):
+                enclosure_images = [
+                    e.get('href') for e in entry.enclosures 
+                    if e.get('type', '').startswith('image/') and e.get('href')
+                ]
+                if enclosure_images: original_image_url = enclosure_images[0]
+
+  
+            if not original_image_url:
+                html_content = ""
+                if entry.get('content'):
+                    html_content = entry.content[0].get('value', '')
+                elif entry.get('summary'):
+                    html_content = entry.get('summary', '')
+
+                if html_content:
+
+                    soup = BeautifulSoup(html_content, 'html.parser')
+                    img_tag = soup.find('img')
+                    if img_tag and img_tag.get('src'):
+                        original_image_url = img_tag.get('src')
+
+    
+            db_image_url = None 
+    
+            if original_image_url:
+                try:
+                    hdr = {'User-Agent': 'Mozilla/5.0'}
+                    req = urllib.request.Request(original_image_url, headers=hdr)
+
+                    with urllib.request.urlopen(req, timeout=10) as response:
+                        
+                        image_bytes = response.read()
+
+
+                        content_type = response.info().get_content_type()
+                        
+
+                        ext = mimetypes.guess_extension(content_type)
+                        
+
+                        if not ext:
+                            if content_type == 'image/svg+xml': ext = '.svg'
+                            else: ext = '.jpg' 
+                        
+                        filename = f"{uuid.uuid4()}{ext}"
+                        save_path = os.path.join(STATIC_DIR, filename)
+                        
+                        with open(save_path, 'wb') as f:
+                            f.write(image_bytes)
+                        
+                        db_image_url = f"/static/article_images/{filename}" 
+        
+                except (urllib.error.URLError, ValueError, TimeoutError) as e:
+                    print(f"Erro ao baixar imagem: {original_image_url} - {e}")
+                    db_image_url = None
+                except Exception as e:
+                    print(f"Erro inesperado ao processar imagem: {original_image_url} - {e}")
+                    db_image_url = None
 
             article = {
                 'title': entry.get('title'),
                 'source': {'name': feed.feed.get('title', 'RSS Source')},
                 'url': entry.get('link'),
-                'publishedAt': published_time_iso
+                'publishedAt': published_time_iso,
+                'topic': topic,      
+                'image_url': db_image_url,
+                'summary': summary_text,
+                'author': author   
             }
             articles_list.append(article)
             
@@ -114,8 +211,7 @@ def update_feeds_for_user(db: requests.Session, user: models.User):
         try:
             num_saved = save_articles_to_db(
                 db=db,
-                articles=articles, 
-                topic=None, 
+                articles=articles,  
                 journal_id=journal.id, 
                 generic=False,
                 user_id=user.id 

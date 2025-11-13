@@ -63,6 +63,9 @@ class ArticleSummary(BaseModel):
     id: int
     title: str
     url: str
+    author: Optional[str] = None
+    summary:  Optional[str] = None
+    image_url: Optional[str] = None
     published_at: datetime
     topic: Optional[str] = None
     generic_news: bool
@@ -111,3 +114,11 @@ class Journal(BaseModel):
     users: List[UserSummary] = []
     articles: List[ArticleSummary] = []
     model_config = ConfigDict(from_attributes=True)
+    
+    
+
+   
+
+class RefreshResponse(BaseModel):
+    refresh_details: dict
+    articles: List[Article]

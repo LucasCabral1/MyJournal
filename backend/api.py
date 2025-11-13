@@ -4,6 +4,7 @@ import select
 from fastapi import Depends, FastAPI, Query, status, HTTPException
 from typing import Optional, List
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session, selectinload
 
 
@@ -15,7 +16,7 @@ from core.database import (
     get_user_by_email, get_user_by_username, login
 )
 from core.helpers import create_access_token, discover_rss_feed, get_password_hash
-from core.schemas import Article, JournalCreateRequest, JournalCreateResponse, User, UserCreate, UserLoginRequest , Token, Journal
+from core.schemas import Article, JournalCreateRequest, JournalCreateResponse, RefreshResponse, User, UserCreate, UserLoginRequest , Token, Journal
 
 app = FastAPI(
     title="MyJournal API",
@@ -37,6 +38,8 @@ app.add_middleware(
 )
 
 models.setup_database_orm()
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/articles/", response_model=List[Article])
 def read_articles(
@@ -197,15 +200,31 @@ def get_my_articles(
 ):
     return current_user.journals
 
-@app.post("/api/articles/me/refresh", response_model=dict)
+@app.post("/api/articles/me/refresh", response_model=RefreshResponse)
 def update_my_journal_feeds(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
 
     try:
-        result = update_feeds_for_user(db=db, user=current_user)
-        return result
+        refresh_result = update_feeds_for_user(db=db, user=current_user)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Falha ao atualizar feeds: {e}")
+    
+    try:
+        articles_list = db.query(models.Article).filter(
+            models.Article.user_id == current_user.id
+        ).options(
+            selectinload(models.Article.journal) 
+        ).order_by(
+            models.Article.published_at.desc() 
+        ).all()
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Falha ao buscar artigos após atualização: {e}")
+
+    return {
+        "refresh_details": refresh_result,
+        "articles": articles_list
+    }
 

@@ -58,7 +58,7 @@ def get_articles_with_filters(
     return articles
         
     
-def save_articles_to_db(db: Session, articles: List[dict], journal_id: int, user_id: int, topic: str = None, generic: bool = True) -> int:
+def save_articles_to_db(db: Session, articles: List[dict], journal_id: int, user_id: int, generic: bool = True) -> int:
     if not articles:
         return 0
 
@@ -74,6 +74,10 @@ def save_articles_to_db(db: Session, articles: List[dict], journal_id: int, user
         title = article.get('title')
         url = article.get('url')
         published_at_str = article.get('publishedAt') 
+        topic = article.get('topic') 
+        img = article.get('image_url')
+        summary = article.get('summary', None)
+        author = article.get('author', None)
 
         if not all([title, url, published_at_str]):
             print(f"  > Pulando artigo inválido (dados ausentes): {title}")
@@ -90,7 +94,10 @@ def save_articles_to_db(db: Session, articles: List[dict], journal_id: int, user
             'published_at': published_at_brazil,
             'topic': topic,
             'downloaded_at': current_time,
-            'generic_news': generic
+            'generic_news': generic,
+            'image_url': img,
+            'summary': summary,
+            'author': author
         }
         articles_to_insert.append(article_data)
         

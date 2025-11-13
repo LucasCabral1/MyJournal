@@ -1,25 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import {  Zap, Info, ExternalLink, AlertTriangle, Newspaper } from 'lucide-react';
+import {  Zap, Info, ExternalLink, AlertTriangle, Newspaper, RefreshCw } from 'lucide-react';
 import Button from '../components/Button';
 import { useAuthStore } from '../stores/authStore'; 
 import toast from 'react-hot-toast';
 import ValidadeUrl from '../components/ValidateUrl';
 import Loader from '../components/Loading/Loading';
+import RefreshDialog, { type RefreshStatus } from '../components/RefreshDialog';
 interface Article {
   id: number;
   title: string;
   url: string;
+  image_url: string | null;
+  author: string | null;
   topic: string;
   published_at: string;
 }
 
-const API_BASE_URL = 'http://127.0.0.1:8001/api';
+const API_BASE_URL = '/api';
 
 const HomePage: React.FC = () => {
   const [articles, setArticles] = useState<Article[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshResult, setRefreshResult] = useState<RefreshStatus | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false); // Loader do botão
+  const [isDialogOpen, setIsDialogOpen] = useState(false); // Controla o diálogo
 
   const token = useAuthStore((state) => state.token); //
 
@@ -30,6 +36,7 @@ const HomePage: React.FC = () => {
         if (!token) {
           throw new Error('Usuário não autenticado. Por favor, faça login.');
         }
+
         const responseRefresh = await fetch(`${API_BASE_URL}/articles/me/refresh`, {
           method: 'POST',
           headers: {
@@ -48,26 +55,10 @@ const HomePage: React.FC = () => {
           throw new Error('Falha ao buscar os artigos atualizados.');
         }
 
-        const response = await fetch(`${API_BASE_URL}/articles/me`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const data = await responseRefresh.json();
+        const articles: Article[] = data.articles;
 
-        if (response.status === 401) {
-          toast.error('Sessão expirada. Por favor, faça login novamente.');
-          throw new Error('Sessão expirada. Por favor, faça login novamente.');
-        }
-
-        if (!response.ok) {
-            toast.error('Falha ao buscar os artigos.');
-          throw new Error('Falha ao buscar os artigos.');
-        }
-
-        const data: Article[] = await response.json();
-        setArticles(data);
+        setArticles(articles);
       } catch (err: unknown) {
         let errorMessage = 'Ocorreu um erro inesperado.';
         if (err instanceof Error) {
@@ -82,6 +73,58 @@ const HomePage: React.FC = () => {
 
     fetchArticles();
   }, [token]); 
+
+
+  const handleManualRefresh = async () => {
+    if (!token) {
+      toast.error('Usuário não autenticado. Por favor, faça login.');
+      return;
+    }
+
+    setIsRefreshing(true); 
+    try {
+      const responseRefresh = await fetch(`${API_BASE_URL}/articles/me/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (responseRefresh.status === 401) {
+        toast.error('Sessão expirada. Por favor, faça login novamente.');
+        return; 
+      }
+
+      const data = await responseRefresh.json();
+
+      if (!responseRefresh.ok) {
+        throw new Error(data.message || 'Falha ao atualizar os artigos.');
+      }
+
+      // --- Sucesso ---
+      setArticles(data.articles);    
+      console.log('Detalhes da atualização:', data.articles.length ); 
+      const refreshData: RefreshStatus = {
+        message: data.message || 'Busca de novos artigos finalizada.',
+        new_articles_found: data.refresh_details.new_articles_found, 
+        total_articles: data.articles.length  
+      }; 
+      setRefreshResult(refreshData);        
+      setIsDialogOpen(true);         
+      toast.success(data.message || 'Artigos atualizados!');
+
+    } catch (err: unknown) {
+      let errorMessage = 'Ocorreu um erro inesperado.';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      toast.error(errorMessage); 
+    } finally {
+      setIsRefreshing(false); 
+    }
+  };
+
   const renderArticleContent = () => {
 
     if (isLoading) {
@@ -98,7 +141,7 @@ const HomePage: React.FC = () => {
     if (error) {
       return (
         <div className="flex justify-center items-center py-10 text-red-600 bg-red-50 p-4 rounded-lg">
-          <AlertTriangle size={24} />
+          <AlertTriangle size={20} />
           <span className="ml-2">{error}</span>
         </div>
       );
@@ -112,43 +155,92 @@ const HomePage: React.FC = () => {
       );
     }
 
-    return (
-      <div className="overflow-x-auto relative shadow-md sm:rounded-lg">
-        <table className="w-full text-sm text-left text-gray-500">
-          <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-            <tr>
-              <th scope="col" className="py-3 px-6">Título</th>
-              <th scope="col" className="py-3 px-6">Tópico</th>
-              <th scope="col" className="py-3 px-6">Publicado em</th>
-              <th scope="col" className="py-3 px-6">Link</th>
-            </tr>
-          </thead>
-          <tbody>
-            {articles.map((article) => (
-              <tr key={article.id} className="bg-white border-b hover:bg-gray-50">
-                <th scope="row" className="py-4 px-6 font-medium text-gray-900 whitespace-nowrap">
-                  {article.title}
-                </th>
-                <td className="py-4 px-6">{article.topic}</td>
-                <td className="py-4 px-6">
-                  {new Date(article.published_at).toLocaleDateString('pt-BR')}
-                </td>
-                <td className="py-4 px-6">
-                  <a
-                    href={article.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center font-medium text-cyan-600 hover:underline"
-                  >
-                    Ver Artigo <ExternalLink size={14} className="ml-1" />
-                  </a>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
+   return (
+  <div className="overflow-x-auto relative shadow-md sm:rounded-lg">
+    <table className="w-full text-sm text-left text-gray-500">
+      <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+        <tr>
+          <th scope="col" className="py-3 px-6">
+            Imagem
+          </th>
+
+          <th scope="col" className="py-3 px-6">
+            Título
+          </th>
+
+          <th scope="col" className="py-3 px-6">
+            Autor
+          </th>
+          <th scope="col" className="py-3 px-6">
+            Tópico
+          </th>
+          <th scope="col" className="py-3 px-6">
+            Publicado em
+          </th>
+          <th scope="col" className="py-3 px-6">
+            Link
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {articles.map((article) => (
+          <tr key={article.id} className="bg-white border-b hover:bg-gray-50 align-middle">
+            
+
+            <td className="py-4 px-6">
+              {article.image_url ? (
+                <img
+                  src={article.image_url}
+                  alt={article.title}
+                  className="w-24 h-16 object-cover rounded"
+                />
+              ) : (
+                <div className="w-24 h-16 bg-gray-100 rounded flex items-center justify-center text-gray-400">
+                  <Newspaper size={24} />
+                </div>
+              )}
+            </td>
+
+
+            <th
+              scope="row"
+              className="py-4 px-6 font-medium text-gray-900 whitespace-nowrap max-w-xs truncate"
+              title={article.title} 
+            >
+              {article.title}
+            </th>
+            
+      
+            <td className="py-4 px-6 whitespace-nowrap">
+              {article.author || 'N/A'}
+            </td>
+            
+            
+            <td className="py-4 px-6">
+              {article.topic || 'N/A'}
+            </td>
+            
+
+            <td className="py-4 px-6 whitespace-nowrap">
+              {new Date(article.published_at).toLocaleDateString('pt-BR')}
+            </td>
+            
+            <td className="py-4 px-6">
+              <a
+                href={article.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center font-medium text-cyan-600 hover:underline"
+              >
+                Ver Artigo <ExternalLink size={14} className="ml-1" />
+              </a>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
   };
 
 
@@ -181,6 +273,16 @@ const HomePage: React.FC = () => {
         <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">
           Seus Artigos Salvos
         </h2>
+        <div className="flex justify-end mb-4">
+          <Button
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            icon={isRefreshing ? <Loader size="sm" /> : <RefreshCw size={18} />}
+          >
+            {isRefreshing ? 'Atualizando...' : 'Atualizar Artigos'}
+          </Button>
+        </div>
+
         {renderArticleContent()}
       </div>
 
@@ -189,7 +291,12 @@ const HomePage: React.FC = () => {
         </div>
 
       
-      
+   
+      <RefreshDialog 
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        refreshData={refreshResult}
+      />
     </div>
   );
 }

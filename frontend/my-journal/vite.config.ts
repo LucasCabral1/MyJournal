@@ -7,9 +7,13 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      '/api': {
+      '/static': {
         target: 'http://127.0.0.1:8001', 
-        changeOrigin: true, 
+        changeOrigin: true,
+      },
+      '/api': {
+        target: 'http://127.0.0.1:8001',
+        changeOrigin: true,
       }
     }
   }

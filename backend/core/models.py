@@ -31,10 +31,13 @@ class Article(Base):
     url = Column(String, nullable=False, unique=True)
     published_at = Column(DateTime, nullable=False)
     topic = Column(String, nullable=True)
+    summary = Column(String, nullable=True)
+    author = Column(String, nullable=True)
+    image_url = Column(String, nullable=True)
     downloaded_at = Column(DateTime, nullable=False)
     generic_news = Column(Boolean)
     user_id = Column(Integer, ForeignKey("users.id"))
-    author = relationship("User", back_populates="articles")
+    user = relationship("User", back_populates="articles")
     journal_id = Column(Integer, ForeignKey("journals.id"), nullable=False)
     journal = relationship("Journal", back_populates="articles")
 
@@ -50,7 +53,7 @@ class User(Base):
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     is_active = Column(Boolean, default=True, nullable=False)
     is_admin = Column(Boolean, default=False, nullable=False)
-    articles = relationship("Article", back_populates="author")
+    articles = relationship("Article", back_populates="user")
     journals = relationship("Journal",
                             secondary=user_journal_association,
                             back_populates="users")
