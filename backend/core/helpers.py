@@ -1,7 +1,9 @@
 
 from datetime import datetime, timedelta, timezone
+import mimetypes
 import os
 import ssl
+import uuid
 from dotenv import load_dotenv
 import feedparser
 import requests
@@ -11,6 +13,7 @@ from dateutil import parser
 from passlib.context import CryptContext
 from jose import jwt
 import feedfinder2
+import trafilatura
 
 load_dotenv()
 
@@ -162,3 +165,120 @@ def discover_rss_feed(website_url: str) -> str:
         
     except requests.exceptions.RequestException as e:
         raise ValueError(f"Erro de rede ao tentar acessar '{website_url}': {e}")
+    
+    
+def fetch_article_content_and_og_image(url):
+
+    content = None
+    og_image = None
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:137.0) Gecko/20100101 Firefox/137.0',
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Cache-Control": "max-age=0",
+            "referer": "https://www.google.com"
+        }
+        response = requests.get(url, headers=headers, timeout=20) 
+        response.raise_for_status()
+        html_content = response.text
+
+
+        content = trafilatura.extract(html_content, include_comments=False, include_tables=False)
+
+        # 2. Extract og:image using BeautifulSoup
+        soup = BeautifulSoup(html_content, 'lxml') # Use lxml ou html.parser
+        og_image_tag = soup.find('meta', property='og:image')
+        
+        if og_image_tag and og_image_tag.get('content'):
+            og_image = og_image_tag['content']
+            # Resolve URLs relativas (ex: /images/foo.jpg)
+            og_image = urljoin(url, og_image)
+
+        return {'content': content, 'og_image': og_image}
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching {url}: {e}")
+        return {'content': None, 'og_image': None}
+    except Exception as e:
+        print(f"Error processing content/og:image from {url}: {e}")
+        return {'content': content, 'og_image': None}
+    
+    
+def processar_artigo_e_baixar_og_image(entry):
+    # Pega o link do artigo direto da entrada do feed
+    article_url = entry.link
+    
+    # 1. Chama sua função para obter os dados da página
+    print(f"Buscando conteúdo/imagem de: {article_url}")
+    dados_pagina = fetch_article_content_and_og_image(article_url)
+    
+    article_content = dados_pagina['content']
+    original_image_url = dados_pagina['og_image']
+    
+    db_image_path = None
+
+    # 2. Lógica de Download (adaptada da nossa conversa anterior)
+    
+    # Verifica se a URL é válida (começa com http) E não é None
+    is_valid_download_url = original_image_url and (
+        original_image_url.startswith('http://') or 
+        original_image_url.startswith('https://')
+    )
+
+    if is_valid_download_url:
+        try:
+            # Headers simples, apenas para o download da imagem
+            image_headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
+                'Referer': article_url # Boa prática
+            }
+            
+            response = requests.get(original_image_url, headers=image_headers, stream=True, timeout=10)
+            response.raise_for_status()
+
+            content_type = response.headers.get('content-type')
+            ext = mimetypes.guess_extension(content_type)
+            if not ext or ext == '.jpe': 
+                ext = '.jpg'
+            elif content_type == 'image/svg+xml':
+                ext = '.svg'
+
+            filename = f"{uuid.uuid4()}{ext}"
+            SAVE_DIR = "static/articles_images"
+
+        
+            os.makedirs(SAVE_DIR, exist_ok=True)
+            
+ 
+            save_path = os.path.join(SAVE_DIR, filename)
+            
+            with open(save_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192): 
+                    f.write(chunk)
+            
+            db_image_path = f"/static/articles_images/{filename}" 
+            print(f"Sucesso! Imagem salva em: {save_path}")
+
+        except requests.exceptions.RequestException as e:
+            print(f"Erro ao baixar imagem (requests): {original_image_url} - {e}")
+        except Exception as e:
+            print(f"Erro inesperado ao salvar imagem: {original_image_url} - {e}")
+    
+    elif original_image_url:
+        print(f"Ignorando URL de imagem inválida ou 'data URI': {original_image_url[:70]}...")
+    else:
+        print(f"Nenhuma og:image encontrada para: {article_url}")
+
+    # 3. Retorna o dicionário final para seu script principal
+    return {
+        'content': article_content, 
+        'image_path': db_image_path
+    }
