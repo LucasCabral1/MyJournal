@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
-import styles from './dialog-styles.module.css'; // Vou assumir que o CSS é o mesmo
+import styles from './dialog-styles.module.css'; 
 
-// Definimos os tipos de props que nosso componente aceitará
+
 interface DialogoCustomizadoProps {
   triggerText: React.ReactNode | string;
   title: string;

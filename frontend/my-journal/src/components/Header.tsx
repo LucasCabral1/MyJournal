@@ -1,5 +1,6 @@
 import React from 'react';
-import { Home, Info, Mail, Code } from 'lucide-react';
+import { Home, Info, Mail, Code, CircleUser } from 'lucide-react';
+
 
 // Tipamos as props que o Header recebe
 type HeaderProps = {
@@ -14,6 +15,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, onLogout }) => {
     { id: 'home', label: 'Home', icon: <Home size={18} /> },
     { id: 'sobre', label: 'Sobre', icon: <Info size={18} /> },
     { id: 'contato', label: 'Contato', icon: <Mail size={18} /> },
+    { id: 'profile', label: 'Profile', icon: <CircleUser size={18} /> },
   ];
 
   return (

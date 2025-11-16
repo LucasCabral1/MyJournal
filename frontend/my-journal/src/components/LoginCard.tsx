@@ -8,6 +8,7 @@ import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
 import toast from 'react-hot-toast';
 
 import { useAuthStore } from '../stores/authStore';
+import { Label } from 'flowbite-react';
 
 interface LoginCardProps {
   onNavigateToRegister: () => void;
@@ -107,9 +108,9 @@ export function LoginCard({ onNavigateToRegister }: LoginCardProps) {
       <form onSubmit={handleEmailLogin} className="space-y-4">
         
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+          <Label htmlFor="email" className="block text-sm font-medium text-gray-700">
             Email
-          </label>
+          </Label>
           <div className="relative mt-1">
             <div className="absolute inset-y-0 left-0 flex items-center pl-3">
               <Mail className="w-5 h-5 text-gray-400" />

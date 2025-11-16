@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import {  Zap, Info, ExternalLink, AlertTriangle, Newspaper, RefreshCw } from 'lucide-react';
+import {  Zap, Info, AlertTriangle, Newspaper, RefreshCw } from 'lucide-react';
 import Button from '../components/Button';
 import { useAuthStore } from '../stores/authStore'; 
 import toast from 'react-hot-toast';
 import ValidadeUrl from '../components/ValidateUrl';
 import Loader from '../components/Loading/Loading';
 import RefreshDialog, { type RefreshStatus } from '../components/RefreshDialog';
+import ArticlesTable from '../components/Table';
+import type { Journal } from '../interface';
 interface Article {
   id: number;
   title: string;
@@ -15,6 +17,7 @@ interface Article {
   author: string | null;
   topic: string;
   published_at: string;
+  journal: Journal
 }
 
 const API_BASE_URL = '/api';
@@ -24,10 +27,9 @@ const HomePage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshResult, setRefreshResult] = useState<RefreshStatus | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false); // Loader do botão
-  const [isDialogOpen, setIsDialogOpen] = useState(false); // Controla o diálogo
-
-  const token = useAuthStore((state) => state.token); //
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const token = useAuthStore((state) => state.token); 
 
   useEffect(() => {
     const fetchArticles = async () => {
@@ -102,7 +104,6 @@ const HomePage: React.FC = () => {
         throw new Error(data.message || 'Falha ao atualizar os artigos.');
       }
 
-      // --- Sucesso ---
       setArticles(data.articles);    
       console.log('Detalhes da atualização:', data.articles.length ); 
       const refreshData: RefreshStatus = {
@@ -145,102 +146,10 @@ const HomePage: React.FC = () => {
           <span className="ml-2">{error}</span>
         </div>
       );
+    }else {
+      return <ArticlesTable articles={articles} />;
     }
 
-    if (articles.length === 0) {
-      return (
-        <div className="text-center py-10 text-gray-500">
-          <p>Você ainda não possui artigos salvos.</p>
-        </div>
-      );
-    }
-
-   return (
-  <div className="overflow-x-auto relative shadow-md sm:rounded-lg">
-    <table className="w-full text-sm text-left text-gray-500">
-      <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-        <tr>
-          <th scope="col" className="py-3 px-6">
-            Imagem
-          </th>
-
-          <th scope="col" className="py-3 px-6">
-            Título
-          </th>
-
-          <th scope="col" className="py-3 px-6">
-            Autor
-          </th>
-          <th scope="col" className="py-3 px-6">
-            Tópico
-          </th>
-          <th scope="col" className="py-3 px-6">
-            Publicado em
-          </th>
-          <th scope="col" className="py-3 px-6">
-            Link
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {articles.map((article) => (
-          <tr key={article.id} className="bg-white border-b hover:bg-gray-50 align-middle">
-            
-
-            <td className="py-4 px-6">
-              {article.image_url ? (
-                <img
-                  src={article.image_url}
-                  alt={article.title}
-                  className="w-24 h-16 object-cover rounded"
-                />
-              ) : (
-                <div className="w-24 h-16 bg-gray-100 rounded flex items-center justify-center text-gray-400">
-                  <Newspaper size={24} />
-                </div>
-              )}
-            </td>
-
-
-            <th
-              scope="row"
-              className="py-4 px-6 font-medium text-gray-900 whitespace-nowrap max-w-xs truncate"
-              title={article.title} 
-            >
-              {article.title}
-            </th>
-            
-      
-            <td className="py-4 px-6 whitespace-nowrap">
-              {article.author || 'N/A'}
-            </td>
-            
-            
-            <td className="py-4 px-6">
-              {article.topic || 'N/A'}
-            </td>
-            
-
-            <td className="py-4 px-6 whitespace-nowrap">
-              {new Date(article.published_at).toLocaleDateString('pt-BR')}
-            </td>
-            
-            <td className="py-4 px-6">
-              <a
-                href={article.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center font-medium text-cyan-600 hover:underline"
-              >
-                Ver Artigo <ExternalLink size={14} className="ml-1" />
-              </a>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-);
   };
 
 
@@ -262,7 +171,7 @@ const HomePage: React.FC = () => {
           Seu agregador de notícias diário, feito sob medida para seus interesses.
         </p>
         <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-          <Button icon={<Zap size={18} />}>Comece Agora</Button>
+          <Button icon={<Zap size={18} />} >Comece Agora</Button>
           <Button variant="secondary" icon={<Info size={18} />}>
             Saber Mais
           </Button>

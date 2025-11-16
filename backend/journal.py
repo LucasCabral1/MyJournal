@@ -12,6 +12,7 @@ from email.utils import mktime_tz, parsedate_tz
 
 import urllib
 
+from core.schemas import Article
 from core.helpers import  processar_artigo_e_baixar_og_image
 from core.database import SessionLocal, create_journal, delete_old_articles, save_articles_to_db
 from core import models 
@@ -68,13 +69,23 @@ def format_rss_time_to_iso(time_string):
     except Exception:
         return datetime.datetime.now().isoformat()
 
-def fetch_news_from_rss(feed_url, limit):
+def fetch_news_from_rss(feed_url, limit, db, user_id):
     try:
         feed = feedparser.parse(feed_url)
         articles_list = []
         
         for entry in feed.entries[:limit]:
             
+            url = entry.get('link')
+            if(url):
+                exists = db.query(Article).filter(
+                    Article.url == url,
+                    Article.user_id == user_id
+                ).first()
+                if(exists):
+                    continue
+                
+                
             published_time = entry.get('published', datetime.datetime.now().isoformat())
             
             if not published_time.endswith('Z') and '+' not in published_time:
@@ -108,7 +119,7 @@ def fetch_news_from_rss(feed_url, limit):
             article = {
                 'title': entry.get('title'),
                 'source': {'name': feed.feed.get('title', 'RSS Source')},
-                'url': entry.get('link'),
+                'url': url,
                 'publishedAt': published_time_iso,
                 'topic': topic,      
                 'image_url': db_image_url,
@@ -127,19 +138,17 @@ def fetch_news_from_rss(feed_url, limit):
 
 
 def update_feeds_for_user(db: requests.Session, user: models.User):
-    print(f"Iniciando atualização de feeds para o usuário: {user.id} ({user.email})")
     total_articles_saved = 0
     
 
     for journal in user.journals:
         if not journal.rss:
-            print(f"  > Pulando Journal ID {journal.id} (sem RSS URL)")
             continue
 
         print(f"\n- Processando Journal: '{journal.name}' (ID: {journal.id})")
-        print(f"  > URL RSS: {journal.rss}")
+     
         
-        articles = fetch_news_from_rss(journal.rss, NEWS_LIMIT_PER_TOPIC)
+        articles = fetch_news_from_rss(journal.rss, NEWS_LIMIT_PER_TOPIC, db, user.id)
         
         if not articles:
             print("  > Nenhum artigo novo encontrado.")
@@ -167,7 +176,7 @@ def update_feeds_for_user(db: requests.Session, user: models.User):
         
         time.sleep(1)
 
-    print(f"\nAtualização concluída para o usuário {user.id}. Total de {total_articles_saved} novos artigos salvos.")
+    print(f"\nAtualização concluída. Total de {total_articles_saved} novos artigos salvos.")
     
     return {
         "status": "success", 

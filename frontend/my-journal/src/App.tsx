@@ -18,9 +18,10 @@ import { Toaster } from 'react-hot-toast';
 import { RegisterCard } from './components/RegisterCard';
 
 import { useAuthStore } from './stores/authStore';
+import ProfilePage from './pages/Profile';
 
 
-type PageId = 'home' | 'sobre' | 'contato';
+type PageId = 'home' | 'sobre' | 'contato' | 'profile';
 type AuthView = 'login' | 'register';
 
 const App: React.FC = () => {
@@ -40,6 +41,8 @@ const App: React.FC = () => {
         return <SobrePage />;
       case 'contato':
         return <ContatoPage />;
+      case 'profile':
+        return <ProfilePage />;
       default:
         return <HomePage />;
     }
