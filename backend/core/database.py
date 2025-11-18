@@ -165,7 +165,8 @@ def create_db_user(db: Session, user_in: UserCreate) -> User:
         email=user_in.email,
         hashed_password=hashed_password,
         first_name=user_in.first_name,
-        last_name=user_in.last_name
+        last_name=user_in.last_name,
+        newsletter_opt_in=user_in.newsletter_opt_in
     )
 
     db.add(db_user)

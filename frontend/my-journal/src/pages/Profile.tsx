@@ -1,7 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  User,
   Mail,
   CalendarDays,
   Shield,
@@ -9,34 +8,105 @@ import {
   Edit,
   AlertTriangle,
   BookMarked,
-  Library,
+  CircleUser,
+  Bell,
+  AtSign,
+  Newspaper,
 } from 'lucide-react';
 import Button from '../components/Button';
 import { useAuthStore } from '../stores/authStore'; 
 import toast from 'react-hot-toast';
 import Loader from '../components/Loading/Loading';
+import type { User } from '../interface';
+import InfoCard from '../components/InfoCard';
 
-
-interface UserProfileData {
-  id: number;
-  username: string;
-  email: string;
-  first_name: string | null;
-  last_name: string | null;
-  created_at: string; 
-  is_active: boolean;
-  is_admin: boolean;
-  articles_count: number;
-  journals_count: number;
-}
 
 const API_BASE_URL = '/api';
 
+
+type UserFormData = {
+  first_name: string;
+  last_name: string;
+  username: string;
+  email: string;
+  newsletter_opt_in?: boolean;
+};
+
 const ProfilePage: React.FC = () => {
-  const [user, setUser] = React.useState<UserProfileData | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const token = useAuthStore((state) => state.token);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLoadingUpdate, setIsLoadingUpdate] = useState(false);
+  const [formData, setFormData] = useState<UserFormData>({
+    first_name: '',
+    last_name: '',
+    username: '',
+    email: '',
+    newsletter_opt_in: false,
+  });
+
+  const handleEditClick = () => {
+    if (!user) return;
+    setFormData({
+      first_name: user.first_name || '',
+      last_name: user.last_name || '',
+      username: user.username,
+      email: user.email,
+      newsletter_opt_in: user.newsletter_opt_in,
+    });
+    setIsEditing(true);
+  };
+
+  const handleCancelClick = () => {
+    setIsEditing(false);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoadingUpdate(true);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/me`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Falha ao atualizar o perfil.');
+      }
+
+      const updatedUser: User = await response.json();
+
+      // Atualiza o estado local e sai do modo de edição
+      setUser(updatedUser);
+      setIsEditing(false);
+      toast.success('Perfil atualizado com sucesso!');
+
+    } catch (err: unknown) {
+      let errorMessage = 'Ocorreu um erro inesperado.';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      toast.error(errorMessage);
+    } finally {
+      setIsLoadingUpdate(false);
+    }
+  };
 
   React.useEffect(() => {
     const fetchUserProfile = async () => {
@@ -66,7 +136,7 @@ const ProfilePage: React.FC = () => {
           throw new Error('Falha ao buscar dados do perfil.');
         }
 
-        const data: UserProfileData = await response.json();
+        const data: User = await response.json();
         setUser(data);
       } catch (err: unknown) {
         let errorMessage = 'Ocorreu um erro inesperado.';
@@ -124,6 +194,30 @@ const ProfilePage: React.FC = () => {
       ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
       : user.username;
 
+  const statusSpan = (
+    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+      user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+    }`}>
+      {user.is_active ? 'Ativo' : 'Inativo'}
+    </span>
+  );
+
+  const adminSpan = (
+    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+      user.is_admin ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+    }`}>
+      {user.is_admin ? 'Administrador' : 'Usuário'}
+    </span>
+  );
+
+  const newsletterSpan = (
+    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+      user.newsletter_opt_in ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+    }`}>
+      {user.newsletter_opt_in ? 'Inscrito' : 'Não inscrito'}
+    </span>
+  );
+
   return (
     <div className="container mx-auto my-12 px-4">
       <div className="p-8 md:p-12 bg-white rounded-2xl shadow-xl border border-gray-100">
@@ -134,7 +228,7 @@ const ProfilePage: React.FC = () => {
             transition={{ duration: 0.5, type: 'spring', stiffness: 120 }}
             className="inline-flex items-center justify-center p-5 bg-cyan-100 text-cyan-700 rounded-full mb-6"
           >
-            <User size={40} />
+            <CircleUser size={40} />
           </motion.div>
 
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900">
@@ -144,9 +238,14 @@ const ProfilePage: React.FC = () => {
             @{user.username}
           </p>
 
-          <Button variant="secondary" icon={<Edit size={18} />}>
-            Editar Perfil
-          </Button>
+          <Button
+          variant="secondary"
+          icon={<Edit size={18} />}
+          onClick={handleEditClick}
+          disabled={isEditing}
+        >
+          Editar Perfil
+        </Button>
         </div>
 
         <hr className="my-8 border-gray-200" />
@@ -154,44 +253,91 @@ const ProfilePage: React.FC = () => {
         <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center md:text-left">
           Detalhes da Conta
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <InfoCard icon={<Mail size={20} />} title="Email" value={user.email} />
-          <InfoCard
-            icon={<CalendarDays size={20} />}
-            title="Membro desde"
-            value={formatDate(user.created_at)}
-          />
-          <InfoCard
-            icon={<CheckCircle size={20} />}
-            title="Status"
-            value={
-              <span
-                className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  user.is_active
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
-                }`}
+       <form onSubmit={handleSave}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <InfoCard
+              icon={<AtSign size={20} />}
+              label="Username"
+              isEditing={isEditing}
+              displayValue={user.username}
+              type="text"
+              name="username"
+              value={formData.username}
+              onChange={handleInputChange}
+            />
+
+            <InfoCard
+              icon={<Mail size={20} />}
+              label="Email"
+              isEditing={isEditing}
+              displayValue={user.email}
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+            />
+
+            <InfoCard
+              icon={<CalendarDays size={20} />}
+              label="Membro desde"
+              isEditing={isEditing}
+              displayValue={formatDate(user.created_at)}
+              type="static"
+            />
+
+            <InfoCard
+              icon={<CheckCircle size={20} />}
+              label="Status"
+              isEditing={isEditing}
+              displayValue={statusSpan}
+              type="static"
+            />
+
+
+            <InfoCard
+              icon={<Shield size={20} />}
+              label="Nível de Acesso"
+              isEditing={isEditing}
+              displayValue={adminSpan}
+              type="static" 
+              value={user.is_admin ? 'Administrador' : 'Usuário'} 
+              disabled={true} 
+
+            />
+
+            <InfoCard
+              icon={<Bell size={20} />}
+              label="Resumo por Email"
+              isEditing={isEditing}
+              displayValue={newsletterSpan}
+              type="checkbox"
+              name="newsletter_opt_in"
+              checked={formData.newsletter_opt_in}
+              onChange={handleInputChange}
+            />
+
+          {isEditing && (
+            <div className="flex flex-col sm:flex-row gap-4 pt-3">
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={isLoadingUpdate}
               >
-                {user.is_active ? 'Ativo' : 'Inativo'}
-              </span>
-            }
-          />
-          <InfoCard
-            icon={<Shield size={20} />}
-            title="Nível de Acesso"
-            value={
-              <span
-                className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  user.is_admin
-                    ? 'bg-blue-100 text-blue-800'
-                    : 'bg-gray-100 text-gray-800'
-                }`}
+                {isLoadingUpdate ? 'Salvando...' : 'Salvar Alterações'}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleCancelClick}
               >
-                {user.is_admin ? 'Administrador' : 'Usuário'}
-              </span>
-            }
-          />
-        </div>
+                Cancelar
+              </Button>
+            </div>
+          )}
+
+          </div>  
+        </form>
 
         <hr className="my-8 border-gray-200" />
 
@@ -202,12 +348,12 @@ const ProfilePage: React.FC = () => {
           <StatCard
             icon={<BookMarked size={30} />}
             label="Artigos Salvos"
-            value={user.articles_count}
+            value={user.articles.length}
           />
           <StatCard
-            icon={<Library size={30} />}
-            label="Journals Seguidos"
-            value={user.journals_count}
+            icon={<Newspaper size={30}/>}
+            label="Journais Seguidos"
+            value={user.journals.length}
           />
         </div>
       </div>
@@ -216,23 +362,9 @@ const ProfilePage: React.FC = () => {
 };
 
 
-interface InfoCardProps {
-  icon: React.ReactNode;
-  title: string;
-  value: React.ReactNode;
-}
 
-const InfoCard: React.FC<InfoCardProps> = ({ icon, title, value }) => (
-  <div className="flex items-start p-4 bg-gray-50 rounded-lg border border-gray-200">
-    <div className="text-cyan-600 mt-1 mr-3 flex-shrink-0">{icon}</div>
-    <div>
-      <h3 className="text-sm font-medium text-gray-500">{title}</h3>
-      <p className="text-md font-semibold text-gray-900 break-words">
-        {value}
-      </p>
-    </div>
-  </div>
-);
+
+
 
 
 interface StatCardProps {

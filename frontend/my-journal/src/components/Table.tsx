@@ -122,7 +122,7 @@ const ArticlesTable: React.FC<ArticlesTableProps> = ({ articles }) => {
               rel="noopener noreferrer"
               className="flex items-center font-medium text-cyan-600 hover:underline"
             >
-              Ver Artigo <ExternalLink size={14} className="ml-1" />
+              Ver Artigo
             </a>
           );
         },

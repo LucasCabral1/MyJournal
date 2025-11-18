@@ -165,7 +165,6 @@ useEffect(() => {
        value={currentUrl}
        onChange={(e) => setCurrentUrl(e.target.value)}
        placeholder="https://www.jornalexemplo.com"
-              // O 'disabled' é importante para evitar digitação durante o load
               disabled={isFormLoading} 
        style={{
         width: '100%',
@@ -178,7 +177,6 @@ useEffect(() => {
 
       <button
        type="submit"
-              // O 'disabled' impede cliques duplos
               disabled={isFormLoading} 
        style={{
         backgroundColor: '#007bff',
@@ -187,7 +185,6 @@ useEffect(() => {
         border: 'none',
         borderRadius: '8px',
         marginTop: '16px',
-                // Feedback visual de carregamento
         cursor: isFormLoading ? 'wait' : 'pointer', 
                 opacity: isFormLoading ? 0.7 : 1,
         display: 'flex',
@@ -196,7 +193,6 @@ useEffect(() => {
        }}
       >
        <Plus size={16} />
-              {/* Texto dinâmico */}
        {isFormLoading ? 'Salvando...' : 'Salvar'}
       </button>
      </form>

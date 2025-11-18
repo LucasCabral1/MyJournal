@@ -227,4 +227,13 @@ def update_my_journal_feeds(
         "refresh_details": refresh_result,
         "articles": articles_list
     }
+    
+@app.get(
+    "/api/users/me", 
+    response_model=User,
+)
+def get_my_articles(
+    current_user: User = Depends(get_current_user)
+):
+    return current_user
 

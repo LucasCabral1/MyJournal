@@ -16,7 +16,8 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     first_name: Optional[str] = None
-    last_name: Optional[str] = None
+    last_name: Optional[str] = None,
+    newsletter_opt_in: Optional[bool] = False
     
 class Token(BaseModel):
     access_token: str

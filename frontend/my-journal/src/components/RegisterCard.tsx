@@ -1,4 +1,3 @@
-// src/components/RegisterCard.tsx
 
 import React, { useState } from 'react';
 import { Mail, Lock, User } from 'lucide-react'; 
@@ -13,10 +12,13 @@ interface RegisterCardProps {
 export function RegisterCard({ onNavigateToLogin }: RegisterCardProps) {
   
   const setToken = useAuthStore((state) => state.setToken);
+  const [userName, setUserName] = useState<string>('');
   const [name, setName] = useState<string>('');
+  const [lastName, setLastName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
+  const [newsletterOptIn, setNewsletterOptIn] = useState<boolean>(false);
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -32,12 +34,19 @@ export function RegisterCard({ onNavigateToLogin }: RegisterCardProps) {
 
     try {
      
-      const response = await fetch('http://127.0.0.1:8001/api/register', { 
+      const response = await fetch('/api/register', { 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username: name, email, password }),
+       body: JSON.stringify({ 
+          username: userName, 
+          email: email, 
+          password: password,
+          first_name: name,  
+          last_name: lastName,
+          newsletter_opt_in: newsletterOptIn,
+        }),
       });
 
       if (!response.ok) {
@@ -74,6 +83,29 @@ export function RegisterCard({ onNavigateToLogin }: RegisterCardProps) {
         
         <div>
           <Label htmlFor="name" className="block text-sm font-medium text-gray-700">
+            User Name
+          </Label>
+          <div className="relative mt-1">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3">
+              <User className="w-5 h-5 text-gray-400" />
+            </div>
+            <input
+              id="userName"
+              name="userName"
+              type="text"
+              autoComplete="userName"
+              required
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg
+                         shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Seu Apelido"
+            />
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="name" className="block text-sm font-medium text-gray-700">
             Nome
           </Label>
           <div className="relative mt-1">
@@ -91,6 +123,29 @@ export function RegisterCard({ onNavigateToLogin }: RegisterCardProps) {
               className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg
                          shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               placeholder="Seu nome"
+            />
+          </div>
+        </div>
+
+         <div>
+          <Label htmlFor="name" className="block text-sm font-medium text-gray-700">
+            Sobrenome
+          </Label>
+          <div className="relative mt-1">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3">
+              <User className="w-5 h-5 text-gray-400" />
+            </div>
+            <input
+              id="lastName"
+              name="lastName"
+              type="text"
+              autoComplete="lastName"
+              required
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg
+                         shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Seu Sobrenome"
             />
           </div>
         </div>
@@ -160,6 +215,21 @@ export function RegisterCard({ onNavigateToLogin }: RegisterCardProps) {
             />
           </div>
         </div>
+        <div>
+        <div className="flex items-center">
+          <input
+            id="newsletter-opt-in"
+            name="newsletter-opt-in"
+            type="checkbox"
+            checked={newsletterOptIn}
+            onChange={(e) => setNewsletterOptIn(e.target.checked)}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+          <Label htmlFor="newsletter-opt-in" className="ml-2 block text-sm text-gray-700">
+            Quero receber o resumo diário das principais notícias por e-mail.
+          </Label>
+        </div>
+      </div>
 
         <button
           type="submit"

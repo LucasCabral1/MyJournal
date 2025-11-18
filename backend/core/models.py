@@ -53,6 +53,7 @@ class User(Base):
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     is_active = Column(Boolean, default=True, nullable=False)
     is_admin = Column(Boolean, default=False, nullable=False)
+    newsletter_opt_in = Column(Boolean, default=False, nullable=False)
     articles = relationship("Article", back_populates="user")
     journals = relationship("Journal",
                             secondary=user_journal_association,
