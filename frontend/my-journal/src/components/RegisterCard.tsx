@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User } from 'lucide-react'; 
 import toast from 'react-hot-toast';
-import { useAuthStore } from '../stores/authStore';
+import { useAuthStore } from '../stores/store';
 import { Label } from 'flowbite-react';
 interface RegisterCardProps {
 

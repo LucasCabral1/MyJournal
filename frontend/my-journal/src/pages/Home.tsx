@@ -2,28 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {  Zap, Info, AlertTriangle, Newspaper, RefreshCw } from 'lucide-react';
 import Button from '../components/Button';
-import { useAuthStore } from '../stores/authStore'; 
+import { useArticleStore, useAuthStore } from '../stores/store'; 
 import toast from 'react-hot-toast';
 import ValidadeUrl from '../components/ValidateUrl';
 import Loader from '../components/Loading/Loading';
 import RefreshDialog, { type RefreshStatus } from '../components/RefreshDialog';
 import ArticlesTable from '../components/Table';
-import type { Journal } from '../interface';
-interface Article {
-  id: number;
-  title: string;
-  url: string;
-  image_url: string | null;
-  author: string | null;
-  topic: string;
-  published_at: string;
-  journal: Journal
-}
+
 
 const API_BASE_URL = '/api';
 
 const HomePage: React.FC = () => {
-  const [articles, setArticles] = useState<Article[]>([]);
+ const { articles, setArticles, hasLoaded, setHasLoaded } = useArticleStore();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshResult, setRefreshResult] = useState<RefreshStatus | null>(null);
@@ -38,6 +28,11 @@ const HomePage: React.FC = () => {
         if (!token) {
           throw new Error('Usuário não autenticado. Por favor, faça login.');
         }
+
+        if (hasLoaded) {
+        setIsLoading(false);
+        return;
+      }
 
         const responseRefresh = await fetch(`${API_BASE_URL}/articles/me/refresh`, {
           method: 'POST',
@@ -58,9 +53,10 @@ const HomePage: React.FC = () => {
         }
 
         const data = await responseRefresh.json();
-        const articles: Article[] = data.articles;
 
-        setArticles(articles);
+
+        setArticles(data.articles);
+        setHasLoaded(true);
       } catch (err: unknown) {
         let errorMessage = 'Ocorreu um erro inesperado.';
         if (err instanceof Error) {
@@ -74,7 +70,7 @@ const HomePage: React.FC = () => {
     };
 
     fetchArticles();
-  }, [token]); 
+  }, [token, hasLoaded, setArticles, setHasLoaded]); 
 
 
   const handleManualRefresh = async () => {
@@ -82,7 +78,6 @@ const HomePage: React.FC = () => {
       toast.error('Usuário não autenticado. Por favor, faça login.');
       return;
     }
-
     setIsRefreshing(true); 
     try {
       const responseRefresh = await fetch(`${API_BASE_URL}/articles/me/refresh`, {
@@ -105,7 +100,7 @@ const HomePage: React.FC = () => {
       }
 
       setArticles(data.articles);    
-      console.log('Detalhes da atualização:', data.articles.length ); 
+
       const refreshData: RefreshStatus = {
         message: data.message || 'Busca de novos artigos finalizada.',
         new_articles_found: data.refresh_details.new_articles_found, 

@@ -1,11 +1,12 @@
 # api.py
 
-import select
+
 from fastapi import Depends, FastAPI, Query, status, HTTPException
 from typing import Optional, List
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import select
 
 
 from core import models
@@ -16,7 +17,7 @@ from core.database import (
     get_user_by_email, get_user_by_username, login
 )
 from core.helpers import create_access_token, discover_rss_feed, get_password_hash
-from core.schemas import Article, JournalCreateRequest, JournalCreateResponse, RefreshResponse, User, UserCreate, UserLoginRequest , Token, Journal
+from core.schemas import Article, JournalCreateRequest, JournalCreateResponse, RefreshResponse, User, UserCreate, UserLoginRequest , Token, Journal, UserUpdate
 
 app = FastAPI(
     title="MyJournal API",
@@ -155,14 +156,21 @@ def add_user_journal(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    url_str = str(request_data.url)
+    url_str = str(request_data.url).rstrip('/')
 
     try:
+        for existing_journal in current_user.journals:
+            if existing_journal.url == request_data.url:
+                return existing_journal
+            
+        statement = select(models.Journal).where(models.Journal.url == url_str)
+        journal_in_db = db.scalars(statement).first()
+
+        if journal_in_db:
+            return journal_in_db
+            
         discovered_rss_url_str = discover_rss_feed(url_str)
             
-        for existing_journal in current_user.journals:
-            if existing_journal.rss == discovered_rss_url_str:
-                return existing_journal
 
         journal_to_add = create_journal(
             db=db, 
@@ -236,4 +244,48 @@ def get_my_articles(
     current_user: User = Depends(get_current_user)
 ):
     return current_user
+
+
+@app.patch("/api/users/me", response_model=User)
+def update_user_me(
+    user_in: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    
+    
+    if user_in.email is not None and user_in.email != current_user.email:
+        user_exists = get_user_by_email(db, email=user_in.email)
+        if user_exists:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Este email já está em uso."
+            )
+        current_user.email = user_in.email
+
+    if user_in.username is not None and user_in.username != current_user.username:
+        user_exists = get_user_by_username(db, username=user_in.username)
+        if user_exists:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Este nome de usuário já está em uso."
+            )
+        current_user.username = user_in.username
+
+
+    if user_in.newsletter_opt_in is not None:
+        current_user.newsletter_opt_in = user_in.newsletter_opt_in
+
+
+    try:
+        db.add(current_user)
+        db.commit()
+        db.refresh(current_user)
+        return current_user
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao atualizar perfil: {str(e)}"
+        )
 

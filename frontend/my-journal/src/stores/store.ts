@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import type { Article } from '../interface';
 
 
 interface AuthState {
@@ -24,3 +25,18 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+
+interface ArticleState {
+  articles: Article[];
+  setArticles: (articles: Article[]) => void;
+  hasLoaded: boolean; // Para saber se já fizemos o fetch inicial alguma vez
+  setHasLoaded: (status: boolean) => void;
+}
+
+export const useArticleStore = create<ArticleState>((set) => ({
+  articles: [],
+  hasLoaded: false,
+  setArticles: (articles) => set({ articles }),
+  setHasLoaded: (status) => set({ hasLoaded: status }),
+}));

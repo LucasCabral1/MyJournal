@@ -19,6 +19,14 @@ class UserCreate(BaseModel):
     last_name: Optional[str] = None,
     newsletter_opt_in: Optional[bool] = False
     
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    email: Optional[EmailStr] = None
+    newsletter_opt_in: Optional[bool] = None
+    
+    class Config:
+        from_attributes = True
+    
 class Token(BaseModel):
     access_token: str
     token_type: str

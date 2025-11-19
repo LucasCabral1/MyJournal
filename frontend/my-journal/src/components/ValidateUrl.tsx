@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import DialogoCustomizado from './Dialog/Dialog';
 import { Dialog } from '@base-ui-components/react';
 import type { Journal } from '../interface';
-import { useAuthStore } from '../stores/authStore';
+import { useAuthStore } from '../stores/store';
 import Loader from './Loading/Loading';
 
 
@@ -87,7 +87,7 @@ useEffect(() => {
   event.preventDefault();
 
   const validation = validateUrl(currentUrl);
-
+  
   if (validation.isValid) {
 
       setIsLoading(true); 
@@ -99,7 +99,7 @@ useEffect(() => {
       }
 
       try {
-        const response = await fetch('http://127.0.0.1:8001/api/journal', { 
+        const response = await fetch('api/journal', { 
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

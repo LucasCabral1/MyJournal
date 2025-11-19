@@ -7,7 +7,7 @@ import { Mail, Lock } from 'lucide-react';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
 import toast from 'react-hot-toast';
 
-import { useAuthStore } from '../stores/authStore';
+import { useAuthStore } from '../stores/store';
 import { Label } from 'flowbite-react';
 
 interface LoginCardProps {

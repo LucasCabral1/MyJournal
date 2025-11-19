@@ -14,7 +14,7 @@ import {
   Newspaper,
 } from 'lucide-react';
 import Button from '../components/Button';
-import { useAuthStore } from '../stores/authStore'; 
+import { useAuthStore } from '../stores/store'; 
 import toast from 'react-hot-toast';
 import Loader from '../components/Loading/Loading';
 import type { User } from '../interface';
@@ -48,6 +48,7 @@ const ProfilePage: React.FC = () => {
   });
 
   const handleEditClick = () => {
+    console.log('User before edit:', user);
     if (!user) return;
     setFormData({
       first_name: user.first_name || '',
@@ -87,12 +88,12 @@ const ProfilePage: React.FC = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || 'Falha ao atualizar o perfil.');
+        toast.error(errorData.detail || 'Falha ao atualizar o perfil.');
       }
 
       const updatedUser: User = await response.json();
 
-      // Atualiza o estado local e sai do modo de edição
+
       setUser(updatedUser);
       setIsEditing(false);
       toast.success('Perfil atualizado com sucesso!');

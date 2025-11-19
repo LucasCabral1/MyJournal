@@ -17,7 +17,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Toaster } from 'react-hot-toast';
 import { RegisterCard } from './components/RegisterCard';
 
-import { useAuthStore } from './stores/authStore';
+import { useAuthStore } from './stores/store';
 import ProfilePage from './pages/Profile';
 
 

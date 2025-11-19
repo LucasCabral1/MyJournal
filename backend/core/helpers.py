@@ -159,6 +159,19 @@ def discover_rss_feed(website_url: str) -> str:
         feeds = feedfinder2.find_feeds(website_url, user_agent=headers['User-Agent'])
         
         if not feeds:
+            sufixos = ['rss', 'feed']
+            for sufixo in sufixos:
+                url_teste = urljoin(website_url if website_url.endswith('/') else website_url + '/', sufixo)
+                if url_teste not in feeds: 
+                    try:
+                        resp = requests.get(url_teste, headers=headers, timeout=3) # HEAD é mais rápido que GET
+                        if resp.status_code == 200:
+                            ct = resp.headers.get('Content-Type', '').lower()
+                            if 'xml' in ct or 'rss' in ct:
+                                feeds.append(url_teste)
+                    except:
+                        continue
+        if not feeds:
             raise ValueError(f"Nenhum feed RSS pôde ser encontrado em '{website_url}'")
         
         return feeds[0]

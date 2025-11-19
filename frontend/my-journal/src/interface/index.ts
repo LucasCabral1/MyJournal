@@ -11,7 +11,7 @@ export interface Article {
   downloaded_at: string; 
   generic_news: boolean | null; 
   user_id: number | null; 
-  journal_id: number;
+  journal: Journal
 
   
 }

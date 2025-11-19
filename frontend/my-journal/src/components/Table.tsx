@@ -11,7 +11,6 @@ import {
   Select,
   Pagination,
   Label,
-  Button,
 } from 'flowbite-react';
 
 
@@ -36,9 +35,10 @@ interface Article {
   journal: Journal;
 }
 
-import styles from './Dialog/dialog-styles.module.css';
+
 
 import ControlledDialog from './DialogControlled/DialogControlled';
+import Button from './Button';
 
 interface ArticlesTableProps {
   articles: Article[];
@@ -286,9 +286,11 @@ const ArticlesTable: React.FC<ArticlesTableProps> = ({ articles }) => {
           onPageChange={(page) => {
             table.setPageIndex(page - 1);
           }}
-          showIcons
+          
         />
+
       </div>
+
 
       
       {selectedArticle && (
@@ -296,18 +298,16 @@ const ArticlesTable: React.FC<ArticlesTableProps> = ({ articles }) => {
       open={openModal}
       onOpenChange={setOpenModal}
       title={selectedArticle.title}
-      popupClassName="max-w-2xl"
+      popupClassName="max-w-3xl"
       
       actions={
-        <Button
-          href={selectedArticle.url}
-          rel="noopener noreferrer"
-          className={`${styles.Button} flex items-center`}
-        >
-          <ExternalLink size={16} className="mr-2" />
-          Ver Artigo Completo
-        </Button>
-      }
+            <Button
+              icon={<ExternalLink size={18} />}
+              onClick={() => window.open(selectedArticle.url, '_blank')}
+            >
+              Ver Artigo Completo
+            </Button>
+          }
     >
       <div className="space-y-4">
         {selectedArticle.image_url && (

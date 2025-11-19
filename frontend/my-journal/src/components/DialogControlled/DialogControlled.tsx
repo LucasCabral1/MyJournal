@@ -1,7 +1,7 @@
-
 import * as React from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
 import styles from './dialog-styles.module.css';
+import Button from '../Button'; 
 
 interface ControlledDialogProps {
   open: boolean;
@@ -26,16 +26,24 @@ export default function ControlledDialog({
         <Dialog.Backdrop className={styles.Backdrop} />
 
         <Dialog.Popup
-          className={`${styles.Popup} ${popupClassName || ''}`}
+          className={`${styles.Popup} ${popupClassName || ''} flex flex-col max-h-[70vh]`}
         >
-          <Dialog.Title className={styles.Title}>{title}</Dialog.Title>
+          <Dialog.Title className={`${styles.Title} flex-shrink-0`}>
+            {title}
+          </Dialog.Title>
 
-         
-          <div className="mb-6">{children}</div>
+          <div className="flex-1 min-h-0 my-4 pr-2">
+            {children}
+          </div>
 
-          <div className={`${styles.Actions} flex justify-end gap-3 items-center`}>
+          <div className={`${styles.Actions} flex justify-end gap-3 items-center mt-auto flex-shrink-0 pt-4 border-t border-gray-100`}>
             {actions}
-            <Dialog.Close className={styles.Button}>Fechar</Dialog.Close>
+            <Button 
+              variant="secondary" 
+              onClick={() => onOpenChange(false)}
+            >
+              Fechar
+            </Button>
           </div>
         </Dialog.Popup>
       </Dialog.Portal>

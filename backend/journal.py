@@ -78,9 +78,9 @@ def fetch_news_from_rss(feed_url, limit, db, user_id):
             
             url = entry.get('link')
             if(url):
-                exists = db.query(Article).filter(
-                    Article.url == url,
-                    Article.user_id == user_id
+                exists = db.query(models.Article).filter(
+                    models.Article.url == url,
+                    models.Article.user_id == user_id
                 ).first()
                 if(exists):
                     continue
